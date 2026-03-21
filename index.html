@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI-Ready Teaching Stack</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e293b; background: #ffffff; }
+
+      @keyframes pulse-ring {
+        0% { r: 22; opacity: 0.7; }
+        50% { r: 30; opacity: 0.2; }
+        100% { r: 22; opacity: 0.7; }
+      }
+      .pulse-ring { animation: pulse-ring 1.5s ease-in-out infinite; }
+
+      @keyframes blink {
+        0%, 80%, 100% { opacity: 0.3; }
+        40% { opacity: 1; }
+      }
+      .typing-dots span:nth-child(1) { animation: blink 1.4s 0s infinite both; }
+      .typing-dots span:nth-child(2) { animation: blink 1.4s 0.2s infinite both; }
+      .typing-dots span:nth-child(3) { animation: blink 1.4s 0.4s infinite both; }
+
+      @keyframes edge-glow {
+        0% { stroke-width: 1.5; stroke: #cbd5e1; }
+        50% { stroke-width: 4; stroke: #3b82f6; }
+        100% { stroke-width: 1.5; stroke: #cbd5e1; }
+      }
+      .edge-traversal { animation: edge-glow 1s ease-in-out; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,197 @@
+{
+  "metadata": {
+    "title": "Organizational Culture and Change Implementation",
+    "domain": "Organizational Behavior",
+    "author": "Demo",
+    "created": "2026-03-15"
+  },
+  "nodes": [
+    {
+      "id": "culture-change-implementation",
+      "label": "Culture & Change Implementation",
+      "type": "learning_objective",
+      "description": "Analyze how organizational culture affects change implementation, distinguishing structural from individual explanations.",
+      "difficulty": "advanced",
+      "estimated_minutes": 60,
+      "misconceptions": [
+        "Culture change is primarily a communication/messaging problem",
+        "Resistance to change is irrational or reflects poor attitude",
+        "Culture can be directly managed through top-down directives"
+      ]
+    },
+    {
+      "id": "structural-vs-individual",
+      "label": "Structural vs. Individual Explanations",
+      "type": "concept",
+      "description": "The distinction between explaining organizational behavior through individual traits/actions (leadership, motivation, attitude) versus structural features (incentives, systems, power dynamics).",
+      "difficulty": "foundational",
+      "estimated_minutes": 30,
+      "misconceptions": [
+        "Defaulting to 'leadership failed' as the explanation for any organizational problem",
+        "Treating individual behavior as independent of structural context"
+      ]
+    },
+    {
+      "id": "mental-models",
+      "label": "Mental Models (Senge)",
+      "type": "concept",
+      "description": "Deeply held internal images of how the world works that shape how people interpret events and take action — often unconscious and resistant to change.",
+      "difficulty": "intermediate",
+      "estimated_minutes": 25,
+      "misconceptions": [
+        "Equating mental models with opinions or beliefs (they're deeper — structural, often invisible)",
+        "Assuming surfacing a mental model is sufficient to change it"
+      ]
+    },
+    {
+      "id": "psychological-safety",
+      "label": "Psychological Safety (Edmondson)",
+      "type": "concept",
+      "description": "A shared belief that the team is safe for interpersonal risk-taking — speaking up, admitting mistakes, challenging the status quo without fear of punishment.",
+      "difficulty": "intermediate",
+      "estimated_minutes": 20,
+      "misconceptions": [
+        "Confusing psychological safety with 'being nice' or avoiding conflict",
+        "Thinking psychological safety means no accountability"
+      ]
+    },
+    {
+      "id": "scheins-levels",
+      "label": "Schein's Three Levels of Culture",
+      "type": "concept",
+      "description": "Artifacts (visible structures and processes), espoused values (stated strategies, goals, philosophies), and underlying assumptions (unconscious, taken-for-granted beliefs).",
+      "difficulty": "intermediate",
+      "estimated_minutes": 25,
+      "misconceptions": [
+        "Confusing espoused values with actual culture (what we say vs. what we do)",
+        "Treating artifacts as the whole of culture"
+      ]
+    },
+    {
+      "id": "systems-thinking",
+      "label": "Systems Thinking",
+      "type": "concept",
+      "description": "Understanding organizations as complex systems with feedback loops, emergent properties, and non-linear causation.",
+      "difficulty": "intermediate",
+      "estimated_minutes": 30,
+      "misconceptions": [
+        "Linear causal thinking (A causes B, so fix A to fix B)",
+        "Ignoring feedback loops and unintended consequences"
+      ]
+    },
+    {
+      "id": "resistance-to-change",
+      "label": "Resistance as Rational Behavior",
+      "type": "concept",
+      "description": "Reframing resistance not as irrational stubbornness but as rational behavior given existing incentive structures, power dynamics, and mental models.",
+      "difficulty": "advanced",
+      "estimated_minutes": 25,
+      "misconceptions": [
+        "Resistance = bad attitude or fear of the unknown",
+        "If people understood the change, they would support it"
+      ]
+    },
+    {
+      "id": "incentive-structures",
+      "label": "Incentive Structures",
+      "type": "concept",
+      "description": "How formal and informal reward systems shape behavior — and how misalignment between stated goals and actual incentives undermines change.",
+      "difficulty": "intermediate",
+      "estimated_minutes": 20,
+      "misconceptions": [
+        "Incentives = compensation (they include status, workload, autonomy, social capital)",
+        "Assuming stated incentives match actual incentives"
+      ]
+    },
+    {
+      "id": "change-management-strategy",
+      "label": "Change Management Strategy",
+      "type": "learning_objective",
+      "description": "Designing change implementation strategies that account for culture, structure, and individual factors.",
+      "difficulty": "advanced",
+      "estimated_minutes": 45
+    },
+    {
+      "id": "organizational-design",
+      "label": "Organizational Design",
+      "type": "learning_objective",
+      "description": "Understanding how formal structures, roles, and processes shape behavior and culture.",
+      "difficulty": "advanced",
+      "estimated_minutes": 40
+    }
+  ],
+  "edges": [
+    {
+      "source": "structural-vs-individual",
+      "target": "resistance-to-change",
+      "relationship": "prerequisite",
+      "description": "Must distinguish structural from individual explanations before analyzing resistance as rational structural behavior."
+    },
+    {
+      "source": "structural-vs-individual",
+      "target": "culture-change-implementation",
+      "relationship": "prerequisite",
+      "description": "The foundational lens for analyzing culture's role in change."
+    },
+    {
+      "source": "mental-models",
+      "target": "resistance-to-change",
+      "relationship": "prerequisite",
+      "description": "Understanding mental models is required to see why people interpret the same change differently."
+    },
+    {
+      "source": "mental-models",
+      "target": "culture-change-implementation",
+      "relationship": "prerequisite",
+      "description": "Culture operates partly through shared mental models."
+    },
+    {
+      "source": "psychological-safety",
+      "target": "culture-change-implementation",
+      "relationship": "prerequisite",
+      "description": "Psychological safety determines whether concerns about change surface or stay hidden."
+    },
+    {
+      "source": "scheins-levels",
+      "target": "culture-change-implementation",
+      "relationship": "prerequisite",
+      "description": "Must analyze culture at all three levels to understand how it affects change."
+    },
+    {
+      "source": "systems-thinking",
+      "target": "resistance-to-change",
+      "relationship": "prerequisite",
+      "description": "Systems thinking enables seeing resistance as emergent from structural conditions."
+    },
+    {
+      "source": "systems-thinking",
+      "target": "culture-change-implementation",
+      "relationship": "prerequisite",
+      "description": "Change implementation requires understanding non-linear effects and feedback loops."
+    },
+    {
+      "source": "incentive-structures",
+      "target": "resistance-to-change",
+      "relationship": "prerequisite",
+      "description": "Resistance is often rational given existing incentives."
+    },
+    {
+      "source": "resistance-to-change",
+      "target": "culture-change-implementation",
+      "relationship": "prerequisite",
+      "description": "Understanding resistance as rational behavior is required before analyzing culture-change dynamics."
+    },
+    {
+      "source": "culture-change-implementation",
+      "target": "change-management-strategy",
+      "relationship": "builds-on",
+      "description": "Culture analysis feeds into change strategy design."
+    },
+    {
+      "source": "culture-change-implementation",
+      "target": "organizational-design",
+      "relationship": "builds-on",
+      "description": "Understanding culture-change dynamics informs organizational design choices."
+    }
+  ]
+}
