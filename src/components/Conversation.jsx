@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AGENT_NAMES } from '../prompts/agents';
 
+function renderMarkdown(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code style="background:#e2e8f0;padding:1px 4px;border-radius:3px;font-size:13px">$1</code>');
+}
+
 const TOOL_LABELS = {
   get_node: 'Inspect node',
   get_connections: 'Check connections',
@@ -26,6 +36,7 @@ export default function Conversation({
   started,
   isLoading,
   toolCallLog,
+  turnLimitReached,
   onSendMessage,
   onNextTurn,
 }) {
@@ -66,7 +77,7 @@ export default function Conversation({
             {msg.role === 'assistant' && (
               <div style={styles.agentLabel}>{agentName}</div>
             )}
-            <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+            <div style={{ whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
           </div>
         ))}
         {isLoading && (
@@ -122,7 +133,10 @@ export default function Conversation({
       )}
 
       <div style={styles.inputArea}>
-        {started && isSimulated ? (
+        {started && turnLimitReached && (
+          <p style={styles.limitMsg}>Turn limit reached. Click "New session" to start over.</p>
+        )}
+        {started && !turnLimitReached && isSimulated ? (
           <button
             style={styles.nextTurnBtn}
             onClick={onNextTurn}
@@ -130,7 +144,7 @@ export default function Conversation({
           >
             {isLoading ? 'Thinking...' : 'Next turn'}
           </button>
-        ) : started ? (
+        ) : started && !turnLimitReached ? (
           <form onSubmit={handleSubmit} style={styles.form}>
             <input
               style={styles.textInput}
@@ -278,6 +292,12 @@ const styles = {
     marginTop: 4,
     marginLeft: 4,
     lineHeight: 1.4,
+  },
+  limitMsg: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    margin: 0,
   },
   inputArea: {
     borderTop: '1px solid #e2e8f0',

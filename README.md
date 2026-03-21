@@ -48,11 +48,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 - **Play as learner** — You answer the agent's questions yourself.
 - **Simulated learner** — A simulated student ("The Communication Fixer") responds automatically. Click "Next turn" to advance.
-- **Demo mode** — A pre-scripted conversation plays back with no API calls. Works offline.
+- **Demo mode** — A pre-scripted conversation plays back with no API calls. Works offline. Only available with the preloaded demo graph.
 
 ### Agent Tool Use
 
-Each agent has access to six tools:
+Each agent is a proper tool-using agent with six tools:
 
 | Tool | Purpose |
 |------|---------|
@@ -63,9 +63,18 @@ Each agent has access to six tools:
 | `set_focus_node` | Shift attention to a new concept (updates the graph visualization) |
 | `conclude_assessment` | Signal that assessment is complete |
 
+Click **"Under the Hood"** in the toolbar to inspect the system prompts, tool definitions, and graph JSON at any time.
+
+### Cost Controls
+
+- Sessions are capped at **10 turns** (applies to Play as learner and Simulated learner modes, not Demo mode)
+- The API proxy is **rate-limited** to 30 requests per minute per IP
+
 ## Upload Your Own Graph
 
-Click "Upload your own graph" on the landing page to use a custom curriculum. Graphs are JSON files with `nodes` and `edges`:
+Click "Upload your own graph" on the landing page to use a custom curriculum. A **downloadable JSON template** is provided on the upload page, along with a prompt you can paste into Claude to generate a graph from any syllabus or learning objective.
+
+Graphs are JSON files with `nodes` and `edges`:
 
 ```json
 {
@@ -78,8 +87,6 @@ Click "Upload your own graph" on the landing page to use a custom curriculum. Gr
   ]
 }
 ```
-
-A prompt template is provided on the upload page to help you generate graphs using Claude.
 
 ## Deploy to Vercel
 

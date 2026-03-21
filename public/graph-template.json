@@ -1,0 +1,75 @@
+{
+  "metadata": {
+    "title": "Your Graph Title (required)",
+    "domain": "Subject Area (optional)",
+    "author": "Your Name (optional)",
+    "created": "2026-03-21 (optional)"
+  },
+  "nodes": [
+    {
+      "id": "learning-objective-1",
+      "label": "Primary Learning Objective",
+      "type": "learning_objective",
+      "description": "Full description of what the learner should be able to do (optional — used in agent context and tooltips)",
+      "difficulty": "advanced",
+      "estimated_minutes": 60,
+      "misconceptions": [
+        "Common misconception #1 (optional — used by the agent to probe for gaps)",
+        "Common misconception #2"
+      ]
+    },
+    {
+      "id": "concept-1",
+      "label": "Foundation Concept",
+      "type": "concept",
+      "description": "A prerequisite concept that supports the learning objective",
+      "difficulty": "foundational",
+      "estimated_minutes": 20,
+      "misconceptions": [
+        "A typical student misunderstanding about this concept"
+      ]
+    },
+    {
+      "id": "concept-2",
+      "label": "Intermediate Concept",
+      "type": "concept",
+      "description": "A concept that builds on the foundation",
+      "difficulty": "intermediate",
+      "estimated_minutes": 25
+    },
+    {
+      "id": "skill-1",
+      "label": "Applied Skill",
+      "type": "skill",
+      "description": "A practical skill that requires understanding of the concepts above",
+      "difficulty": "intermediate",
+      "estimated_minutes": 30
+    }
+  ],
+  "edges": [
+    {
+      "source": "concept-1",
+      "target": "concept-2",
+      "relationship": "prerequisite",
+      "description": "Must understand the foundation before the intermediate concept (optional)"
+    },
+    {
+      "source": "concept-2",
+      "target": "learning-objective-1",
+      "relationship": "prerequisite",
+      "description": "This concept is required for the learning objective"
+    },
+    {
+      "source": "concept-1",
+      "target": "skill-1",
+      "relationship": "enables",
+      "description": "The foundation concept enables this applied skill"
+    },
+    {
+      "source": "learning-objective-1",
+      "target": "skill-1",
+      "relationship": "builds-on",
+      "description": "The skill builds on the learning objective"
+    }
+  ]
+}

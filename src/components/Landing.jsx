@@ -116,6 +116,14 @@ export default function Landing({ onSelectDemo, onUploadGraph }) {
               />
             </div>
 
+            <a
+              href="/graph-template.json"
+              download="graph-template.json"
+              style={styles.templateLink}
+            >
+              Download JSON template
+            </a>
+
             {errors.length > 0 && (
               <div style={styles.errorBox}>
                 {errors.map((err, i) => (
@@ -260,6 +268,14 @@ const styles = {
     border: '1px solid #e2e8f0',
     borderRadius: 6,
     cursor: 'pointer',
+  },
+  templateLink: {
+    display: 'inline-block',
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#3b82f6',
+    textDecoration: 'none',
   },
   backBtn: {
     marginTop: 16,

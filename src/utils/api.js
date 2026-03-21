@@ -39,6 +39,7 @@ export async function sendMessage({ system, messages, max_tokens = 4096, tools }
 export async function runAgentLoop({ system, messages, tools, onToolCall, onToolLog }) {
   let currentMessages = [...messages];
   const allToolCalls = [];
+  let lastText = '';
   const MAX_ITERATIONS = 10;
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
@@ -48,42 +49,44 @@ export async function runAgentLoop({ system, messages, tools, onToolCall, onTool
     const textBlocks = response.content.filter((b) => b.type === 'text');
     const toolBlocks = response.content.filter((b) => b.type === 'tool_use');
 
-    // If no tool calls, we're done — return the text
-    if (toolBlocks.length === 0) {
-      const message = textBlocks.map((b) => b.text).join('\n');
-      return { message, toolCalls: allToolCalls };
+    // Capture any text from this response
+    const text = textBlocks.map((b) => b.text).join('\n').trim();
+    if (text) lastText = text;
+
+    // Process any tool calls
+    if (toolBlocks.length > 0) {
+      const toolResults = [];
+      for (const block of toolBlocks) {
+        const result = onToolCall(block.name, block.input);
+        const toolCall = {
+          name: block.name,
+          input: block.input,
+          result,
+        };
+        allToolCalls.push(toolCall);
+        if (onToolLog) onToolLog(toolCall);
+
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: typeof result === 'string' ? result : JSON.stringify(result),
+        });
+      }
+
+      // Add assistant response and tool results to messages for next iteration
+      currentMessages = [
+        ...currentMessages,
+        { role: 'assistant', content: response.content },
+        { role: 'user', content: toolResults },
+      ];
     }
 
-    // Process tool calls
-    const toolResults = [];
-    for (const block of toolBlocks) {
-      const result = onToolCall(block.name, block.input);
-      const toolCall = {
-        name: block.name,
-        input: block.input,
-        result,
-      };
-      allToolCalls.push(toolCall);
-      if (onToolLog) onToolLog(toolCall);
-
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: block.id,
-        content: typeof result === 'string' ? result : JSON.stringify(result),
-      });
+    // Done if: no tool calls, or stop_reason is end_turn (even if there were also tool calls)
+    if (toolBlocks.length === 0 || response.stop_reason === 'end_turn') {
+      return { message: lastText, toolCalls: allToolCalls };
     }
-
-    // Add assistant response and tool results to messages for next iteration
-    currentMessages = [
-      ...currentMessages,
-      { role: 'assistant', content: response.content },
-      { role: 'user', content: toolResults },
-    ];
-
-    // If there was also text in this response alongside tool calls, we continue
-    // (the agent might want to use more tools after getting results)
   }
 
-  // If we hit the max iterations, return whatever text we have
-  return { message: '[Agent reached maximum tool iterations]', toolCalls: allToolCalls };
+  // If we hit the max iterations, return whatever text we captured
+  return { message: lastText || '[Agent reached maximum tool iterations]', toolCalls: allToolCalls };
 }

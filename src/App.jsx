@@ -1,13 +1,16 @@
-import React, { useReducer, useCallback, useEffect, useRef } from 'react';
+import React, { useReducer, useCallback, useEffect, useRef, useState } from 'react';
 import Landing from './components/Landing.jsx';
 import KnowledgeGraph from './components/KnowledgeGraph.jsx';
 import Conversation from './components/Conversation.jsx';
 import EvidenceMap from './components/EvidenceMap.jsx';
+import UnderTheHood from './components/UnderTheHood.jsx';
 import obGraph from './data/ob-graph.json';
 import { sendMessage, runAgentLoop } from './utils/api';
 import { buildAgentSystemPrompt, TOOL_DEFINITIONS } from './prompts/agents';
 import { SIMULATED_LEARNER_PROMPT } from './prompts/simulated-learner';
 import { DEMO_SCRIPT } from './data/demo-script';
+
+const MAX_TURNS = 10; // Max exchanges per session (applies to API modes, not demo)
 
 const initialState = {
   screen: 'landing', // 'landing' | 'main'
@@ -31,6 +34,7 @@ function reducer(state, action) {
         ...state,
         screen: 'main',
         graph: action.graph,
+        isDemoGraph: action.isDemo || false,
         conversation: [],
         displayMessages: [],
         evidenceMap: {},
@@ -87,6 +91,7 @@ function reducer(state, action) {
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [showUnderTheHood, setShowUnderTheHood] = useState(false);
   const startedRef = useRef(false);
   // Refs to give the tool callback access to current state without stale closures
   const graphRef = useRef(null);
@@ -237,16 +242,27 @@ export default function App() {
     dispatch({ type: 'SET_DEMO_INDEX', index: turnIndex + 1 });
   }, [executeTool]);
 
+  const turnCount = state.displayMessages.filter((m) => m.role === 'user').length;
+  const turnLimitReached = turnCount >= MAX_TURNS;
+
   const handleSendMessage = useCallback(async (text) => {
+    if (turnLimitReached) return;
     const userMsg = { role: 'user', content: text };
     dispatch({ type: 'ADD_CONVERSATION_MESSAGES', messages: [userMsg] });
     dispatch({ type: 'ADD_DISPLAY_MESSAGE', message: userMsg });
     const allMessages = [...state.conversation, userMsg];
     await callAgent(allMessages);
-  }, [state.conversation, callAgent]);
+  }, [state.conversation, callAgent, turnLimitReached]);
 
   const handleNextTurn = useCallback(async () => {
     if (state.isLoading) return;
+    if (state.mode !== 'demo' && turnLimitReached) {
+      dispatch({
+        type: 'ADD_DISPLAY_MESSAGE',
+        message: { role: 'assistant', content: `This session has reached the ${MAX_TURNS}-turn limit. Click "New session" to start over.` },
+      });
+      return;
+    }
 
     // Demo mode: play back scripted turns
     if (state.mode === 'demo') {
@@ -292,12 +308,12 @@ export default function App() {
       const errorMsg = `[Simulated learner error: ${err.message}]`;
       dispatch({ type: 'ADD_DISPLAY_MESSAGE', message: { role: 'user', content: errorMsg } });
     }
-  }, [state.conversation, state.displayMessages, state.isLoading, state.mode, state.demoTurnIndex, callAgent, playDemoTurn]);
+  }, [state.conversation, state.displayMessages, state.isLoading, state.mode, state.demoTurnIndex, turnLimitReached, callAgent, playDemoTurn]);
 
   if (state.screen === 'landing') {
     return (
       <Landing
-        onSelectDemo={() => dispatch({ type: 'LOAD_GRAPH', graph: obGraph })}
+        onSelectDemo={() => dispatch({ type: 'LOAD_GRAPH', graph: obGraph, isDemo: true })}
         onUploadGraph={(graph) => dispatch({ type: 'LOAD_GRAPH', graph })}
       />
     );
@@ -306,7 +322,13 @@ export default function App() {
   return (
     <div style={styles.root}>
       <div style={styles.toolbar}>
-        <span style={styles.toolbarTitle}>{state.graph?.metadata?.title || 'Knowledge Graph'}</span>
+        <button
+          style={styles.toolbarTitle}
+          onClick={() => { startedRef.current = false; dispatch({ type: 'BACK_TO_LANDING' }); }}
+          title="Back to home"
+        >
+          ← {state.graph?.metadata?.title || 'Knowledge Graph'}
+        </button>
         <div style={styles.toolbarControls}>
           <label style={styles.label}>
             Agent:
@@ -331,9 +353,12 @@ export default function App() {
             >
               <option value="learner">Play as learner</option>
               <option value="simulated">Simulated learner</option>
-              <option value="demo">Demo mode</option>
+              {state.isDemoGraph && <option value="demo">Demo mode</option>}
             </select>
           </label>
+          <button style={styles.newBtn} onClick={() => setShowUnderTheHood(true)}>
+            Under the Hood
+          </button>
           {!state.started ? (
             <button style={styles.startBtn} onClick={() => dispatch({ type: 'START_SESSION' })}>
               Start
@@ -366,6 +391,7 @@ export default function App() {
               started={state.started}
               isLoading={state.isLoading}
               toolCallLog={state.toolCallLog}
+              turnLimitReached={turnLimitReached}
               onSendMessage={handleSendMessage}
               onNextTurn={handleNextTurn}
             />
@@ -381,6 +407,14 @@ export default function App() {
           </div>
         </div>
       </div>
+      {showUnderTheHood && (
+        <UnderTheHood
+          systemPrompt={buildAgentSystemPrompt(state.agent, state.graph)}
+          toolDefinitions={TOOL_DEFINITIONS}
+          graph={state.graph}
+          onClose={() => setShowUnderTheHood(false)}
+        />
+      )}
     </div>
   );
 }
@@ -404,6 +438,11 @@ const styles = {
     fontSize: 16,
     fontWeight: 700,
     color: '#0f172a',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 0,
+    fontFamily: 'inherit',
   },
   toolbarControls: {
     display: 'flex',
