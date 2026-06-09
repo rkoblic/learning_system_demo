@@ -56,7 +56,7 @@ export default function Conversation({
   }
 
   const agentName = AGENT_NAMES[agent];
-  const isSimulated = mode === 'simulated' || mode === 'demo';
+  const isSimulated = mode === 'simulated' || mode === 'custom' || mode === 'demo';
 
   return (
     <div style={styles.container}>
