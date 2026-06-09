@@ -35,6 +35,7 @@ export default function Conversation({
   mode,
   started,
   isLoading,
+  loadingActor,
   toolCallLog,
   turnLimitReached,
   onSendMessage,
@@ -80,7 +81,17 @@ export default function Conversation({
             <div style={{ whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }} />
           </div>
         ))}
-        {isLoading && (
+        {isLoading && loadingActor === 'learner' && (
+          <div style={{ ...styles.messageBubble, ...styles.learnerBubble }}>
+            <div style={styles.learnerLabel}>Learner</div>
+            <div className="typing-dots" style={styles.typing}>
+              <span style={{ ...styles.dot, ...styles.dotOnBlue }} />
+              <span style={{ ...styles.dot, ...styles.dotOnBlue }} />
+              <span style={{ ...styles.dot, ...styles.dotOnBlue }} />
+            </div>
+          </div>
+        )}
+        {isLoading && loadingActor !== 'learner' && (
           <div style={{ ...styles.messageBubble, ...styles.agentBubble }}>
             <div style={styles.agentLabel}>{agentName}</div>
             <div className="typing-dots" style={styles.typing}>
@@ -226,6 +237,14 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.03em',
   },
+  learnerLabel: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: '0.03em',
+  },
   typing: {
     display: 'flex',
     gap: 4,
@@ -237,6 +256,9 @@ const styles = {
     borderRadius: '50%',
     background: '#94a3b8',
     display: 'inline-block',
+  },
+  dotOnBlue: {
+    background: 'rgba(255, 255, 255, 0.85)',
   },
   reasoningContainer: {
     borderTop: '1px solid #e2e8f0',

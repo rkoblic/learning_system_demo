@@ -36,6 +36,7 @@ const initialState = {
   currentNode: null,
   toolCallLog: [], // tool calls from the most recent agent turn
   isLoading: false,
+  loadingActor: null, // 'agent' | 'learner' | null — who is currently generating
   started: false,
   demoTurnIndex: 0,
 };
@@ -91,7 +92,11 @@ function reducer(state, action) {
     case 'ADD_TOOL_CALL':
       return { ...state, toolCallLog: [...state.toolCallLog, action.call] };
     case 'SET_LOADING':
-      return { ...state, isLoading: action.isLoading };
+      return {
+        ...state,
+        isLoading: action.isLoading,
+        loadingActor: action.isLoading ? (action.actor || 'agent') : null,
+      };
     case 'SET_DEMO_INDEX':
       return { ...state, demoTurnIndex: action.index };
     case 'NEW_SESSION':
@@ -192,7 +197,7 @@ export default function App() {
 
   const callAgent = useCallback(async (conversationMessages) => {
     const systemPrompt = buildAgentSystemPrompt(state.agent, state.graph);
-    dispatch({ type: 'SET_LOADING', isLoading: true });
+    dispatch({ type: 'SET_LOADING', isLoading: true, actor: 'agent' });
     dispatch({ type: 'SET_TOOL_LOG', log: [] });
 
     try {
@@ -304,7 +309,7 @@ export default function App() {
     const lastAgentMsg = [...state.displayMessages].reverse().find((m) => m.role === 'assistant');
     if (!lastAgentMsg) return;
 
-    dispatch({ type: 'SET_LOADING', isLoading: true });
+    dispatch({ type: 'SET_LOADING', isLoading: true, actor: 'learner' });
     try {
       // For the simulated learner, flip roles: agent messages become "user" (what the learner sees)
       const learnerMessages = state.conversation.map((m) => ({
@@ -426,6 +431,7 @@ export default function App() {
               mode={state.mode}
               started={state.started}
               isLoading={state.isLoading}
+              loadingActor={state.loadingActor}
               toolCallLog={state.toolCallLog}
               turnLimitReached={turnLimitReached}
               onSendMessage={handleSendMessage}
