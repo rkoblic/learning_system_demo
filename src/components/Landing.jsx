@@ -90,6 +90,12 @@ export default function Landing({ onSelectDemo, onUploadGraph }) {
           </div>
         ) : (
           <div style={styles.uploadSection}>
+            <button
+              style={styles.backBtnTop}
+              onClick={() => { setShowUpload(false); setErrors([]); }}
+            >
+              ← Back
+            </button>
             <div
               style={{
                 ...styles.dropZone,
@@ -286,5 +292,18 @@ const styles = {
     border: 'none',
     cursor: 'pointer',
     textDecoration: 'underline',
+  },
+  backBtnTop: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    marginBottom: 16,
+    padding: '6px 12px',
+    fontSize: 13,
+    fontWeight: 600,
+    background: '#f1f5f9',
+    color: '#334155',
+    border: '1px solid #e2e8f0',
+    borderRadius: 6,
+    cursor: 'pointer',
   },
 };

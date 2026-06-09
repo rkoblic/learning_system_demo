@@ -4,11 +4,23 @@ import KnowledgeGraph from './components/KnowledgeGraph.jsx';
 import Conversation from './components/Conversation.jsx';
 import EvidenceMap from './components/EvidenceMap.jsx';
 import UnderTheHood from './components/UnderTheHood.jsx';
+import LearnerBuilder from './components/LearnerBuilder.jsx';
 import obGraph from './data/ob-graph.json';
 import { sendMessage, runAgentLoop } from './utils/api';
 import { buildAgentSystemPrompt, TOOL_DEFINITIONS } from './prompts/agents';
-import { SIMULATED_LEARNER_PROMPT } from './prompts/simulated-learner';
+import { SIMULATED_LEARNER_PROMPT, buildCustomLearnerPrompt } from './prompts/simulated-learner';
 import { DEMO_SCRIPT } from './data/demo-script';
+
+const DEFAULT_CUSTOM_LEARNER = {
+  overconfident: false, hesitant: false,
+  verbose: false, terse: false,
+  resistant: false, receptive: false,
+  surfaceVocab: false, conflates: false,
+  concreteOnly: false, turnsQuestionsAround: false,
+  patternFirst: false, needsStructure: false,
+  collectivist: false, highContext: false, authorityDeferring: false,
+  otherTendency: '',
+};
 
 const MAX_TURNS = 10; // Max exchanges per session (applies to API modes, not demo)
 
@@ -16,7 +28,8 @@ const initialState = {
   screen: 'landing', // 'landing' | 'main'
   graph: null,
   agent: 'diagnostician',
-  mode: 'learner', // 'learner' | 'simulated' | 'demo'
+  mode: 'learner', // 'learner' | 'simulated' | 'custom' | 'demo'
+  customLearner: { ...DEFAULT_CUSTOM_LEARNER },
   conversation: [], // { role, content, hidden? } — what gets sent to the API
   displayMessages: [], // { role, content } — what the user sees in the chat
   evidenceMap: {}, // nodeId -> { status, evidence, trace_to }
@@ -46,6 +59,16 @@ function reducer(state, action) {
       return { ...state, agent: action.agent };
     case 'SET_MODE':
       return { ...state, mode: action.mode };
+    case 'TOGGLE_LEARNER_TRAIT': {
+      const next = { ...state.customLearner, [action.key]: !state.customLearner[action.key] };
+      // If we just turned a trait on, clear its mutually-exclusive partner.
+      if (next[action.key] && action.pair && next[action.pair]) {
+        next[action.pair] = false;
+      }
+      return { ...state, customLearner: next };
+    }
+    case 'SET_LEARNER_OTHER':
+      return { ...state, customLearner: { ...state.customLearner, otherTendency: action.value } };
     case 'START_SESSION':
       return { ...state, started: true };
     case 'ADD_CONVERSATION_MESSAGES':
@@ -289,8 +312,12 @@ export default function App() {
         content: m.content,
       }));
 
+      const learnerSystem = state.mode === 'custom'
+        ? buildCustomLearnerPrompt(state.customLearner)
+        : SIMULATED_LEARNER_PROMPT;
+
       const response = await sendMessage({
-        system: SIMULATED_LEARNER_PROMPT,
+        system: learnerSystem,
         messages: learnerMessages,
         max_tokens: 256,
       });
@@ -308,7 +335,7 @@ export default function App() {
       const errorMsg = `[Simulated learner error: ${err.message}]`;
       dispatch({ type: 'ADD_DISPLAY_MESSAGE', message: { role: 'user', content: errorMsg } });
     }
-  }, [state.conversation, state.displayMessages, state.isLoading, state.mode, state.demoTurnIndex, turnLimitReached, callAgent, playDemoTurn]);
+  }, [state.conversation, state.displayMessages, state.isLoading, state.mode, state.customLearner, state.demoTurnIndex, turnLimitReached, callAgent, playDemoTurn]);
 
   if (state.screen === 'landing') {
     return (
@@ -353,6 +380,7 @@ export default function App() {
             >
               <option value="learner">Play as learner</option>
               <option value="simulated">Simulated learner</option>
+              <option value="custom">Custom simulated learner</option>
               {state.isDemoGraph && <option value="demo">Demo mode</option>}
             </select>
           </label>
@@ -370,6 +398,14 @@ export default function App() {
           )}
         </div>
       </div>
+      {state.mode === 'custom' && !state.started && (
+        <LearnerBuilder
+          traits={state.customLearner}
+          onToggle={(key, pair) => dispatch({ type: 'TOGGLE_LEARNER_TRAIT', key, pair })}
+          onSetOther={(value) => dispatch({ type: 'SET_LEARNER_OTHER', value })}
+          disabled={state.started}
+        />
+      )}
       <div style={styles.panels}>
         <div style={styles.panelLeft}>
           <div style={styles.panelHeader}>KNOWLEDGE GRAPH</div>
@@ -410,6 +446,12 @@ export default function App() {
       {showUnderTheHood && (
         <UnderTheHood
           systemPrompt={buildAgentSystemPrompt(state.agent, state.graph)}
+          learnerPrompt={
+            state.mode === 'custom'
+              ? buildCustomLearnerPrompt(state.customLearner)
+              : SIMULATED_LEARNER_PROMPT
+          }
+          learnerMode={state.mode}
           toolDefinitions={TOOL_DEFINITIONS}
           graph={state.graph}
           onClose={() => setShowUnderTheHood(false)}

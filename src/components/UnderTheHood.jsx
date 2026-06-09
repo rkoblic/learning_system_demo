@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 
 const TABS = [
-  { key: 'prompt', label: 'System Prompt' },
+  { key: 'prompt', label: 'Agent Prompt' },
+  { key: 'learner', label: 'Simulated Learner' },
   { key: 'tools', label: 'Tools' },
   { key: 'graph', label: 'Graph JSON' },
 ];
 
-export default function UnderTheHood({ systemPrompt, toolDefinitions, graph, onClose }) {
+export default function UnderTheHood({ systemPrompt, learnerPrompt, learnerMode, toolDefinitions, graph, onClose }) {
   const [activeTab, setActiveTab] = useState('prompt');
   const [copied, setCopied] = useState(false);
   const [expandedTools, setExpandedTools] = useState(new Set());
@@ -15,6 +16,8 @@ export default function UnderTheHood({ systemPrompt, toolDefinitions, graph, onC
     switch (activeTab) {
       case 'prompt':
         return systemPrompt;
+      case 'learner':
+        return learnerPrompt;
       case 'tools':
         return JSON.stringify(toolDefinitions, null, 2);
       case 'graph':
@@ -84,7 +87,16 @@ export default function UnderTheHood({ systemPrompt, toolDefinitions, graph, onC
               ))}
             </div>
           ) : (
-            <pre style={styles.codeBlock}>{getContent()}</pre>
+            <>
+              {activeTab === 'learner' && (
+                <div style={styles.contextNote}>
+                  {learnerMode === 'custom'
+                    ? 'Built from the toggles you selected in the Custom simulated learner panel.'
+                    : "Default profile — 'The Communication Fixer'. Switch the Mode dropdown to Custom simulated learner to design your own."}
+                </div>
+              )}
+              <pre style={styles.codeBlock}>{getContent()}</pre>
+            </>
           )}
         </div>
 
@@ -163,6 +175,12 @@ const styles = {
     flex: 1,
     overflow: 'auto',
     padding: 24,
+  },
+  contextNote: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
   codeBlock: {
     fontSize: 13,
