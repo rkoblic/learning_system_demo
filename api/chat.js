@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured on server' });
   }
 
-  const { system, messages, model = 'claude-sonnet-4-20250514', max_tokens = 4096, tools } = req.body;
+  const { system, messages, model = 'claude-sonnet-4-6', max_tokens = 4096, tools } = req.body;
 
   const body = { model, max_tokens, system, messages };
   if (tools && tools.length > 0) {

@@ -2,7 +2,7 @@ export async function sendMessage({ system, messages, max_tokens = 4096, tools }
   const body = {
     system,
     messages,
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens,
   };
   if (tools && tools.length > 0) {

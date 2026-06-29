@@ -6,7 +6,7 @@ AI-Ready Teaching Stack — a three-panel interactive demo showing how knowledge
 ## Tech Stack
 - **Frontend:** React 18 + Vite
 - **Graph visualization:** d3-force
-- **AI:** Claude API (claude-sonnet-4-20250514) via Vercel serverless proxy
+- **AI:** Claude API (claude-sonnet-4-6) via Vercel serverless proxy
 - **Deployment:** Vercel
 
 ## Project Structure

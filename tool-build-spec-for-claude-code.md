@@ -14,7 +14,7 @@ A web-based interactive prototype demonstrating three interconnected layers of A
 
 - **Frontend:** React (single-page app, single file OK — no separate CSS/JS files needed)
 - **Graph visualization:** d3-force (force-directed graph layout)
-- **AI layer:** Claude API (`claude-sonnet-4-20250514`) via `https://api.anthropic.com/v1/messages`
+- **AI layer:** Claude API (`claude-sonnet-4-6`) via `https://api.anthropic.com/v1/messages`
 - **API key handling:** BYOK — the app prompts the user to enter their own Anthropic API key on first load. Store in React state (not localStorage). Show a clear explanation: "This tool uses the Claude API. Enter your API key to get started. Your key is never stored or transmitted anywhere except directly to Anthropic."
 - **State management:** React useState/useReducer — conversation history, evidence map state, graph highlight state, active agent selection
 - **No backend required.** All API calls go directly from the browser to `api.anthropic.com`.
@@ -591,7 +591,7 @@ const response = await fetch("https://api.anthropic.com/v1/messages", {
     "anthropic-dangerous-direct-browser-access": "true"
   },
   body: JSON.stringify({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 1024,
     system: agentSystemPrompt, // includes graph JSON + agent role
     messages: conversationHistory // full history in user/assistant format
@@ -633,7 +633,7 @@ const learnerResponse = await fetch("https://api.anthropic.com/v1/messages", {
     "anthropic-dangerous-direct-browser-access": "true"
   },
   body: JSON.stringify({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 256,
     system: simulatedLearnerSystemPrompt, // learner profile, no graph
     messages: conversationHistoryFromLearnerPerspective // what the learner has "seen"
