@@ -148,6 +148,7 @@ function reducer(state, action) {
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [showUnderTheHood, setShowUnderTheHood] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
   const startedRef = useRef(false);
   // Refs to give the tool callback access to current state without stale closures
   const graphRef = useRef(null);
@@ -396,7 +397,11 @@ export default function App() {
             <select
               style={styles.select}
               value={state.agent}
-              onChange={(e) => dispatch({ type: 'SET_AGENT', agent: e.target.value })}
+              onChange={(e) => {
+                const v = e.target.value;
+                dispatch({ type: 'SET_AGENT', agent: v });
+                if (v === 'custom') setShowBuilder(true);
+              }}
               disabled={state.started}
             >
               <option value="diagnostician">Diagnostician</option>
@@ -410,7 +415,11 @@ export default function App() {
             <select
               style={styles.select}
               value={state.mode}
-              onChange={(e) => dispatch({ type: 'SET_MODE', mode: e.target.value })}
+              onChange={(e) => {
+                const v = e.target.value;
+                dispatch({ type: 'SET_MODE', mode: v });
+                if (v === 'custom') setShowBuilder(true);
+              }}
               disabled={state.started}
             >
               <option value="learner">Play as learner</option>
@@ -419,6 +428,11 @@ export default function App() {
               {state.isDemoGraph && <option value="demo">Demo mode</option>}
             </select>
           </label>
+          {!state.started && (state.agent === 'custom' || state.mode === 'custom') && (
+            <button style={styles.newBtn} onClick={() => setShowBuilder(true)}>
+              Configure
+            </button>
+          )}
           <button style={styles.newBtn} onClick={() => setShowUnderTheHood(true)}>
             Under the Hood
           </button>
@@ -433,23 +447,33 @@ export default function App() {
           )}
         </div>
       </div>
-      {state.agent === 'custom' && !state.started && (
-        <AgentBuilder
-          moves={state.customAgent}
-          onToggle={(key, pair) => dispatch({ type: 'TOGGLE_AGENT_MOVE', key, pair })}
-          onSetOther={(value) => dispatch({ type: 'SET_AGENT_OTHER', value })}
-          onSetInputMode={(useFullPrompt) => dispatch({ type: 'SET_AGENT_INPUT_MODE', useFullPrompt })}
-          onSetFullPrompt={(value) => dispatch({ type: 'SET_AGENT_FULL_PROMPT', value })}
-          disabled={state.started}
-        />
-      )}
-      {state.mode === 'custom' && !state.started && (
-        <LearnerBuilder
-          traits={state.customLearner}
-          onToggle={(key, pair) => dispatch({ type: 'TOGGLE_LEARNER_TRAIT', key, pair })}
-          onSetOther={(value) => dispatch({ type: 'SET_LEARNER_OTHER', value })}
-          disabled={state.started}
-        />
+      {showBuilder && !state.started && (state.agent === 'custom' || state.mode === 'custom') && (
+        <div style={styles.builderOverlay} onClick={() => setShowBuilder(false)}>
+          <div style={styles.builderModal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.builderModalBar}>
+              <div style={styles.builderModalTitle}>Configure your session</div>
+              <button style={styles.startBtn} onClick={() => setShowBuilder(false)}>Done</button>
+            </div>
+            {state.agent === 'custom' && (
+              <AgentBuilder
+                moves={state.customAgent}
+                onToggle={(key, pair) => dispatch({ type: 'TOGGLE_AGENT_MOVE', key, pair })}
+                onSetOther={(value) => dispatch({ type: 'SET_AGENT_OTHER', value })}
+                onSetInputMode={(useFullPrompt) => dispatch({ type: 'SET_AGENT_INPUT_MODE', useFullPrompt })}
+                onSetFullPrompt={(value) => dispatch({ type: 'SET_AGENT_FULL_PROMPT', value })}
+                disabled={state.started}
+              />
+            )}
+            {state.mode === 'custom' && (
+              <LearnerBuilder
+                traits={state.customLearner}
+                onToggle={(key, pair) => dispatch({ type: 'TOGGLE_LEARNER_TRAIT', key, pair })}
+                onSetOther={(value) => dispatch({ type: 'SET_LEARNER_OTHER', value })}
+                disabled={state.started}
+              />
+            )}
+          </div>
+        </div>
       )}
       <div style={styles.panels}>
         <div style={styles.panelLeft}>
@@ -608,5 +632,38 @@ const styles = {
     flex: 1,
     overflow: 'auto',
     padding: 16,
+  },
+  builderOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(15, 23, 42, 0.5)',
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    padding: '32px 20px',
+    overflowY: 'auto',
+    zIndex: 200,
+  },
+  builderModal: {
+    width: '100%',
+    maxWidth: 1140,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  builderModalBar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    padding: '14px 20px',
+    background: '#ffffff',
+    borderRadius: 10,
+    border: '1px solid #e2e8f0',
+  },
+  builderModalTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: '#0f172a',
   },
 };
