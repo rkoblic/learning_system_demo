@@ -33,6 +33,7 @@ export default function EvidenceMap({ graph, evidenceMap }) {
 
   const nodes = graph.nodes.map((n) => ({
     ...n,
+    win_condition: n.win_condition || null,
     status: evidenceMap[n.id]?.status || 'not_assessed',
     evidence: evidenceMap[n.id]?.evidence || null,
     trace_to: evidenceMap[n.id]?.trace_to || null,
@@ -151,6 +152,11 @@ function NodeEntry({ node, nodeLabels, flash }) {
         <span style={styles.nodeLabel}>{node.label}</span>
       </div>
       {node.evidence && <p style={styles.evidence}>{node.evidence}</p>}
+      {node.win_condition && node.status !== 'not_assessed' && (
+        <p style={styles.winCondition}>
+          <span style={styles.winConditionLabel}>Win condition:</span> {node.win_condition}
+        </p>
+      )}
       {node.status === 'gap_detected' && node.trace_to && (
         <p style={styles.traceTo}>
           Traces to: <strong>{nodeLabels[node.trace_to] || node.trace_to}</strong>
@@ -227,6 +233,24 @@ const styles = {
     color: '#ef4444',
     marginTop: 2,
     marginLeft: 28,
+  },
+  winCondition: {
+    fontSize: 12,
+    color: '#475569',
+    marginTop: 4,
+    marginLeft: 28,
+    paddingLeft: 8,
+    borderLeft: '2px solid #cbd5e1',
+    lineHeight: 1.45,
+    fontStyle: 'italic',
+  },
+  winConditionLabel: {
+    fontWeight: 700,
+    color: '#64748b',
+    fontStyle: 'normal',
+    textTransform: 'uppercase',
+    fontSize: 11,
+    letterSpacing: '0.04em',
   },
   contrastBtn: {
     padding: '12px 16px',

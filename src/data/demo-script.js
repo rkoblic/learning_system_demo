@@ -9,7 +9,7 @@ export const DEMO_SCRIPT = [
         { name: 'get_node', input: { node_id: 'culture-change-implementation' } },
         { name: 'get_connections', input: { node_id: 'culture-change-implementation' } },
         { name: 'set_focus_node', input: { node_id: 'culture-change-implementation', reason: 'Starting with the primary learning objective — it has the most prerequisite edges, making it the best entry point for assessment.' } },
-        { name: 'update_node_status', input: { node_id: 'culture-change-implementation', status: 'in_progress', evidence: 'Initial probe — awaiting learner\'s analysis of culture-change scenario.' } },
+        { name: 'update_node_status', input: { node_id: 'culture-change-implementation', status: 'in_progress', evidence: 'Win condition requires a structural explanation that names a specific mechanism blocking the change. Scenario posed — holding judgment until the learner responds.' } },
       ],
     },
     learner: `I think the main issue is a communication problem. Leadership probably didn't do a good job explaining *why* the shift to sales-led was important and what it would mean for the engineering team. When people don't understand the vision behind a change, they resist it. The engineers likely feel like their work is being devalued, and leadership needs to get out in front of that with better messaging and more visibility.`,
@@ -20,7 +20,7 @@ export const DEMO_SCRIPT = [
       toolCalls: [
         { name: 'get_node', input: { node_id: 'structural-vs-individual' } },
         { name: 'set_focus_node', input: { node_id: 'structural-vs-individual', reason: 'The learner defaulted to individual-level explanations (communication, leadership visibility). Probing whether they recognize the structural-vs-individual distinction.' } },
-        { name: 'update_node_status', input: { node_id: 'structural-vs-individual', status: 'in_progress', evidence: 'Learner\'s initial response was entirely individual-level: communication, leadership messaging, vision. No mention of structural factors.' } },
+        { name: 'update_node_status', input: { node_id: 'structural-vs-individual', status: 'in_progress', evidence: 'Win condition asks for both an individual- and a structural-level explanation, naming the structural feature doing the causal work. So far entirely individual-level (communication, leadership, vision) — no structural factor named, so not yet met.' } },
       ],
     },
     learner: `Well, not entirely — I think you'd also need buy-in from key influencers on the engineering side. Maybe you bring in engineering leads as champions of the change, have them model the behavior you want. And you'd want to make sure managers are reinforcing the message consistently. Communication isn't just a one-time thing, it's ongoing.`,
@@ -31,7 +31,7 @@ export const DEMO_SCRIPT = [
       toolCalls: [
         { name: 'get_connections', input: { node_id: 'structural-vs-individual' } },
         { name: 'get_node', input: { node_id: 'incentive-structures' } },
-        { name: 'update_node_status', input: { node_id: 'structural-vs-individual', status: 'gap_detected', evidence: 'When challenged, learner added more individual-level solutions (champions, managers) rather than shifting to structural analysis. Consistent pattern of individual-level default.', trace_to: 'structural-vs-individual' } },
+        { name: 'update_node_status', input: { node_id: 'structural-vs-individual', status: 'gap_detected', evidence: 'Fails the win condition: when challenged, the learner added more individual-level fixes (champions, managers) instead of naming a structural cause. Stops at "leadership/communication" rather than the structural feature doing the causal work.', trace_to: 'structural-vs-individual' } },
         { name: 'set_focus_node', input: { node_id: 'incentive-structures', reason: 'Tracing to prerequisite: testing whether the learner recognizes structural drivers like incentive misalignment.' } },
       ],
     },
@@ -42,7 +42,7 @@ export const DEMO_SCRIPT = [
       message: `Now you're touching on something important — the incentive structure. If engineers are evaluated on technical impact but asked to prioritize sales features, what does that tell us about their resistance? Is it irrational, or is something else going on?`,
       toolCalls: [
         { name: 'get_node', input: { node_id: 'resistance-to-change' } },
-        { name: 'update_node_status', input: { node_id: 'incentive-structures', status: 'in_progress', evidence: 'When directly prompted about evaluation/promotion criteria, learner identified the misalignment between stated goals and reward systems. Required prompting — did not surface this independently.' } },
+        { name: 'update_node_status', input: { node_id: 'incentive-structures', status: 'in_progress', evidence: 'Win condition asks them to identify a stated-goal vs. actual-incentive misalignment and how it shapes behavior. They named the promotion-criteria misalignment — but only when directly prompted, so partially met.' } },
         { name: 'set_focus_node', input: { node_id: 'resistance-to-change', reason: 'The learner identified incentive misalignment when prompted. Now testing whether they can connect this to a reframing of resistance as rational behavior.' } },
       ],
     },
@@ -52,7 +52,7 @@ export const DEMO_SCRIPT = [
     agent: {
       message: `You said "somewhat rational" — let's stay there. You mentioned the engineers are protecting their careers given how promotions work. If you set aside individual attitudes entirely and looked only at the *system* — the incentive structures, the power dynamics, the feedback loops — could you explain the resistance without referencing any individual's attitude or fear?`,
       toolCalls: [
-        { name: 'update_node_status', input: { node_id: 'resistance-to-change', status: 'in_progress', evidence: 'Learner acknowledged resistance is "somewhat rational" given incentives but still defaults to "fear of the unknown" and individual reluctance. Partially grasps rational resistance but hasn\'t fully internalized it.' } },
+        { name: 'update_node_status', input: { node_id: 'resistance-to-change', status: 'in_progress', evidence: 'Win condition asks them to reframe resistance as rational given incentives or mental models, not fear or bad attitude. They concede it is "somewhat rational" but still fall back on "fear of the unknown" — partially met.' } },
         { name: 'get_evidence_state', input: {} },
       ],
     },
@@ -62,8 +62,8 @@ export const DEMO_SCRIPT = [
     agent: {
       message: `Good. Now let's shift. When you think about the culture of this engineering organization, how would you describe it? What makes up that culture?`,
       toolCalls: [
-        { name: 'update_node_status', input: { node_id: 'incentive-structures', status: 'demonstrated', evidence: 'When prompted, identified incentive misalignment as driver of behavior. Required scaffolding but articulated the structural mechanism clearly.' } },
-        { name: 'update_node_status', input: { node_id: 'resistance-to-change', status: 'in_progress', evidence: 'Showed genuine shift in understanding — articulated resistance as rational structural response. But this was heavily scaffolded; unclear if the insight is durable.' } },
+        { name: 'update_node_status', input: { node_id: 'incentive-structures', status: 'demonstrated', evidence: 'Meets the win condition: articulated how the promotion/incentive misalignment drives the deprioritization behavior. Needed scaffolding to get there, but the structural mechanism is clearly stated.' } },
+        { name: 'update_node_status', input: { node_id: 'resistance-to-change', status: 'in_progress', evidence: 'Now approaching the win condition — reframed the resistance as every engineer rationally responding to the same incentive structure. But heavily scaffolded, so not yet independently met.' } },
         { name: 'get_node', input: { node_id: 'scheins-levels' } },
         { name: 'set_focus_node', input: { node_id: 'scheins-levels', reason: 'Moving to Schein\'s three levels. Testing whether the learner analyzes culture at all three levels or stays surface-level.' } },
       ],
@@ -74,7 +74,7 @@ export const DEMO_SCRIPT = [
     agent: {
       message: `You've described what the organization *says* it values. Schein would call those "espoused values." But he distinguishes three levels of culture: artifacts — the visible stuff; espoused values — what people say; and underlying assumptions — the deep, often unconscious beliefs. When you described culture just now, which level were you operating at? And what might the underlying assumptions be that you're not seeing?`,
       toolCalls: [
-        { name: 'update_node_status', input: { node_id: 'scheins-levels', status: 'in_progress', evidence: 'Described culture through espoused values only — mission statement, hiring criteria, company values. Conflated what the organization says with what it actually does.' } },
+        { name: 'update_node_status', input: { node_id: 'scheins-levels', status: 'in_progress', evidence: 'Win condition asks them to place cultural details at the right level and see espoused values diverging from actual assumptions. They described culture through espoused values only (mission, hiring, stated values), conflating what the org says with what it does. Not yet met.' } },
       ],
     },
     learner: `Fair point — I was mostly talking about espoused values. The underlying assumptions... those would be harder to see. Maybe things like "engineering is the most important function" or "the best ideas come from technical people, not salespeople." Those might be beliefs that nobody says out loud but that shape how engineers react to being told sales should drive priorities. That's a deeper level than what's on the website.`,
@@ -83,12 +83,12 @@ export const DEMO_SCRIPT = [
     agent: {
       message: `I think I have a good picture of where you are. Let me share what I've mapped. You have a strong instinct toward individual-level explanations — communication, leadership, buy-in — and that's your default frame. When prompted, you *can* reason structurally about incentive systems and recognize resistance as rational, but you don't go there independently yet. On culture, you initially described it through espoused values but showed you can engage with deeper levels when the framework is introduced. Your understanding of systems thinking and mental models hasn't been directly assessed, but your pattern of individual-level defaults suggests these are areas worth exploring further. Thank you for a thoughtful conversation.`,
       toolCalls: [
-        { name: 'update_node_status', input: { node_id: 'scheins-levels', status: 'demonstrated', evidence: 'Initially conflated espoused values with culture, but when Schein\'s framework was named, correctly identified underlying assumptions. Partial understanding — recognizes levels when prompted.' } },
-        { name: 'update_node_status', input: { node_id: 'resistance-to-change', status: 'demonstrated', evidence: 'Articulated resistance as rational structural response when heavily scaffolded. Genuine shift in understanding, but durability uncertain.' } },
-        { name: 'update_node_status', input: { node_id: 'culture-change-implementation', status: 'gap_detected', evidence: 'Cannot independently analyze culture-change dynamics through a structural lens. Defaults to individual explanations. Can engage structurally when guided, but the structural-vs-individual distinction is not yet internalized.', trace_to: 'structural-vs-individual' } },
-        { name: 'update_node_status', input: { node_id: 'systems-thinking', status: 'gap_detected', evidence: 'Not directly assessed, but learner\'s consistent linear, individual-level reasoning suggests limited systems thinking. Did not spontaneously identify feedback loops or emergent dynamics.', trace_to: 'systems-thinking' } },
+        { name: 'update_node_status', input: { node_id: 'scheins-levels', status: 'demonstrated', evidence: 'Meets the win condition once the framework was named: correctly separated espoused values from the underlying assumptions ("engineering is the most important function") that actually drive behavior.' } },
+        { name: 'update_node_status', input: { node_id: 'resistance-to-change', status: 'demonstrated', evidence: 'Win condition met under scaffolding: reframed the specific resistance as rational given the incentive structure rather than fear or bad attitude. Genuine shift, though durability is uncertain.' } },
+        { name: 'update_node_status', input: { node_id: 'culture-change-implementation', status: 'gap_detected', evidence: 'Fails the win condition: cannot independently explain the stalled change through a specific structural mechanism — defaults to individual factors and only reasons structurally when guided. Traces back to the structural-vs-individual distinction.', trace_to: 'structural-vs-individual' } },
+        { name: 'update_node_status', input: { node_id: 'systems-thinking', status: 'gap_detected', evidence: 'Win condition asks them to trace a feedback loop or unintended consequence rather than linear "fix A to fix B" reasoning. Never surfaced a feedback loop spontaneously; reasoning stayed linear — inferred gap.', trace_to: 'systems-thinking' } },
         { name: 'get_evidence_state', input: {} },
-        { name: 'conclude_assessment', input: { summary: 'Learner defaults to individual-level explanations. Can reason structurally when heavily scaffolded. Key gap: structural-vs-individual distinction not internalized. Schein\'s levels partially understood. Systems thinking and mental models not assessed.' } },
+        { name: 'conclude_assessment', input: { summary: 'Measured against each node\'s win condition: incentive-structures, resistance-to-change, and Schein\'s levels are met, but only under scaffolding. The primary objective (culture-change) and structural-vs-individual fail their win conditions — the learner cannot independently name the structural mechanism and defaults to individual explanations. Systems thinking gap inferred; mental models not assessed.' } },
       ],
     },
     learner: null,

@@ -5,11 +5,13 @@ import Conversation from './components/Conversation.jsx';
 import EvidenceMap from './components/EvidenceMap.jsx';
 import UnderTheHood from './components/UnderTheHood.jsx';
 import LearnerBuilder from './components/LearnerBuilder.jsx';
+import AgentBuilder from './components/AgentBuilder.jsx';
 import obGraph from './data/ob-graph.json';
 import { sendMessage, runAgentLoop } from './utils/api';
 import { buildAgentSystemPrompt, TOOL_DEFINITIONS } from './prompts/agents';
 import { SIMULATED_LEARNER_PROMPT, buildCustomLearnerPrompt } from './prompts/simulated-learner';
 import { DEMO_SCRIPT } from './data/demo-script';
+import tutorStarter from './prompts/tutor.md?raw';
 
 const DEFAULT_CUSTOM_LEARNER = {
   overconfident: false, hesitant: false,
@@ -22,14 +24,26 @@ const DEFAULT_CUSTOM_LEARNER = {
   otherTendency: '',
 };
 
+const DEFAULT_CUSTOM_AGENT = {
+  warmTone: false, neutralTone: false,
+  assessOnly: false, teachWhileAssessing: false,
+  questionFirst: false, productiveStruggle: false,
+  noFalseConfirm: false, praiseProcess: false,
+  traceToPrereqs: false, explainDirectly: false, surfaceMisconceptions: false,
+  otherPrinciple: '',
+  useFullPrompt: false, // false = guided toggles, true = write-your-own tutor.md prompt
+  fullPrompt: tutorStarter, // seeded from src/prompts/tutor.md; editable in the UI
+};
+
 const MAX_TURNS = 10; // Max exchanges per session (applies to API modes, not demo)
 
 const initialState = {
   screen: 'landing', // 'landing' | 'main'
   graph: null,
-  agent: 'diagnostician',
+  agent: 'diagnostician', // 'diagnostician' | 'socratic' | 'direct' | 'custom'
   mode: 'learner', // 'learner' | 'simulated' | 'custom' | 'demo'
   customLearner: { ...DEFAULT_CUSTOM_LEARNER },
+  customAgent: { ...DEFAULT_CUSTOM_AGENT },
   conversation: [], // { role, content, hidden? } — what gets sent to the API
   displayMessages: [], // { role, content } — what the user sees in the chat
   evidenceMap: {}, // nodeId -> { status, evidence, trace_to }
@@ -70,6 +84,20 @@ function reducer(state, action) {
     }
     case 'SET_LEARNER_OTHER':
       return { ...state, customLearner: { ...state.customLearner, otherTendency: action.value } };
+    case 'TOGGLE_AGENT_MOVE': {
+      const next = { ...state.customAgent, [action.key]: !state.customAgent[action.key] };
+      // If we just turned a move on, clear its mutually-exclusive partner.
+      if (next[action.key] && action.pair && next[action.pair]) {
+        next[action.pair] = false;
+      }
+      return { ...state, customAgent: next };
+    }
+    case 'SET_AGENT_OTHER':
+      return { ...state, customAgent: { ...state.customAgent, otherPrinciple: action.value } };
+    case 'SET_AGENT_INPUT_MODE':
+      return { ...state, customAgent: { ...state.customAgent, useFullPrompt: action.useFullPrompt } };
+    case 'SET_AGENT_FULL_PROMPT':
+      return { ...state, customAgent: { ...state.customAgent, fullPrompt: action.value } };
     case 'START_SESSION':
       return { ...state, started: true };
     case 'ADD_CONVERSATION_MESSAGES':
@@ -142,6 +170,7 @@ export default function App() {
           label: node.label,
           type: node.type,
           description: node.description || 'No description available',
+          win_condition: node.win_condition || null,
           difficulty: node.difficulty || 'not specified',
           estimated_minutes: node.estimated_minutes || null,
           misconceptions: node.misconceptions || [],
@@ -196,7 +225,7 @@ export default function App() {
   }, []);
 
   const callAgent = useCallback(async (conversationMessages) => {
-    const systemPrompt = buildAgentSystemPrompt(state.agent, state.graph);
+    const systemPrompt = buildAgentSystemPrompt(state.agent, state.graph, state.customAgent);
     dispatch({ type: 'SET_LOADING', isLoading: true, actor: 'agent' });
     dispatch({ type: 'SET_TOOL_LOG', log: [] });
 
@@ -233,7 +262,7 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_LOADING', isLoading: false });
     }
-  }, [state.agent, state.graph, executeTool]);
+  }, [state.agent, state.graph, state.customAgent, executeTool]);
 
   // Auto-send first agent message when session starts
   useEffect(() => {
@@ -373,6 +402,7 @@ export default function App() {
               <option value="diagnostician">Diagnostician</option>
               <option value="socratic">Socratic Tutor</option>
               <option value="direct">Direct Instructor</option>
+              <option value="custom">Custom agent</option>
             </select>
           </label>
           <label style={styles.label}>
@@ -403,6 +433,16 @@ export default function App() {
           )}
         </div>
       </div>
+      {state.agent === 'custom' && !state.started && (
+        <AgentBuilder
+          moves={state.customAgent}
+          onToggle={(key, pair) => dispatch({ type: 'TOGGLE_AGENT_MOVE', key, pair })}
+          onSetOther={(value) => dispatch({ type: 'SET_AGENT_OTHER', value })}
+          onSetInputMode={(useFullPrompt) => dispatch({ type: 'SET_AGENT_INPUT_MODE', useFullPrompt })}
+          onSetFullPrompt={(value) => dispatch({ type: 'SET_AGENT_FULL_PROMPT', value })}
+          disabled={state.started}
+        />
+      )}
       {state.mode === 'custom' && !state.started && (
         <LearnerBuilder
           traits={state.customLearner}
@@ -451,7 +491,7 @@ export default function App() {
       </div>
       {showUnderTheHood && (
         <UnderTheHood
-          systemPrompt={buildAgentSystemPrompt(state.agent, state.graph)}
+          systemPrompt={buildAgentSystemPrompt(state.agent, state.graph, state.customAgent)}
           learnerPrompt={
             state.mode === 'custom'
               ? buildCustomLearnerPrompt(state.customLearner)

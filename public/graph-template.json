@@ -11,6 +11,7 @@
       "label": "Primary Learning Objective",
       "type": "learning_objective",
       "description": "Full description of what the learner should be able to do (optional — used in agent context and tooltips)",
+      "win_condition": "One explicit sentence describing what success looks like, written for an AI (optional — used as the assessment standard and shown on the evidence map). Leave no tacit word like 'strong' or 'clear' undefined.",
       "difficulty": "advanced",
       "estimated_minutes": 60,
       "misconceptions": [
@@ -23,6 +24,7 @@
       "label": "Foundation Concept",
       "type": "concept",
       "description": "A prerequisite concept that supports the learning objective",
+      "win_condition": "The learner succeeds when they can [do the specific, observable thing that proves they've grasped this concept].",
       "difficulty": "foundational",
       "estimated_minutes": 20,
       "misconceptions": [

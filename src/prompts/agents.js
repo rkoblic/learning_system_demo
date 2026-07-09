@@ -102,6 +102,11 @@ HOW TO WORK:
 5. Use get_evidence_state to review what you've assessed so far and plan your next move
 6. Use conclude_assessment when you have sufficient evidence across the core concepts
 
+WIN CONDITIONS:
+- Many nodes carry a win_condition (returned by get_node): one explicit sentence describing what success looks like for that concept. Treat it as the standard for that node — the machine-readable version of a rubric criterion.
+- Judge the learner's understanding against the node's win_condition when one exists, and set update_node_status to demonstrated (meets it), in_progress (partially meets it), or gap_detected (does not meet it) accordingly.
+- When a node has no win_condition, use your own judgment based on its description and misconceptions.
+
 IMPORTANT:
 - Always use set_focus_node before asking about a new concept
 - Always use update_node_status after you've gathered evidence from the learner's response
@@ -153,10 +158,71 @@ export const AGENT_NAMES = {
   diagnostician: 'Diagnostician',
   socratic: 'Socratic Tutor',
   direct: 'Direct Instructor',
+  custom: 'Custom agent',
 };
 
-export function buildAgentSystemPrompt(agentType, graph) {
+// Each pedagogical move maps to one instruction sentence used in the composed custom-agent role.
+export const AGENT_MOVE_FRAGMENTS = {
+  questionFirst: 'When a learner is stuck, respond with a question that nudges their thinking before you offer any answer.',
+  productiveStruggle: 'Leave room for productive struggle — let the learner wrestle with difficulty rather than rescuing them at the first sign of friction.',
+  noFalseConfirm: 'Never confirm a correct answer that was reached through faulty reasoning. Probe the reasoning, not just the answer.',
+  praiseProcess: 'Acknowledge reasoning, effort, and good moves — not only correct answers.',
+  traceToPrereqs: 'When you detect a gap, trace it backward along prerequisite edges to find the underlying concept that is actually missing.',
+  explainDirectly: 'When you detect a gap, explain the concept directly and concisely with a concrete example, then check that it landed.',
+  surfaceMisconceptions: "Deliberately surface the learner's likely misconceptions and design questions that force them into the open.",
+  warmTone: 'Your tone is warm, patient, and encouraging.',
+  neutralTone: 'Your tone is neutral, precise, and clinical.',
+  assessOnly: 'Focus on assessment — map what the learner understands without teaching or correcting.',
+  teachWhileAssessing: 'Teach and assess at the same time — help the learner move forward while you gather evidence.',
+};
+
+// Short labels used by the live preview composition in the builder UI.
+export const AGENT_MOVE_LABELS = {
+  questionFirst: 'ask a question before answering',
+  productiveStruggle: 'allow productive struggle',
+  noFalseConfirm: 'never confirm right-answer-from-wrong-reasoning',
+  praiseProcess: 'praise reasoning, not just answers',
+  traceToPrereqs: 'trace gaps to prerequisites',
+  explainDirectly: 'explain gaps directly',
+  surfaceMisconceptions: 'surface misconceptions',
+  warmTone: 'warm and encouraging',
+  neutralTone: 'neutral and clinical',
+  assessOnly: 'assess only',
+  teachWhileAssessing: 'teach while assessing',
+};
+
+export function buildCustomAgentRole(moves) {
+  // "Write your own" mode: use the learner-authored tutor prompt verbatim as the role.
+  // The shared tool/graph instructions are still appended by buildAgentSystemPrompt.
+  const fullPrompt = (moves?.fullPrompt || '').trim();
+  if (moves?.useFullPrompt && fullPrompt) {
+    return fullPrompt;
+  }
+
+  const activeBullets = Object.entries(AGENT_MOVE_FRAGMENTS)
+    .filter(([key]) => moves?.[key])
+    .map(([, fragment]) => `- ${fragment}`);
+
+  const otherText = (moves?.otherPrinciple || '').trim();
+  if (otherText) {
+    activeBullets.push(`- ${otherText}`);
+  }
+
+  const behavior = activeBullets.length > 0
+    ? activeBullets.join('\n')
+    : '- Assess the learner\'s understanding with clear, well-targeted questions and adapt as you go.';
+
+  return `You are a custom teaching agent, configured with a specific set of pedagogical principles. Your goal is to move the learner across the knowledge graph — assessing what they understand and, where your principles call for it, helping them learn.
+
+BEHAVIOR:
+${behavior}`;
+}
+
+export function buildAgentSystemPrompt(agentType, graph, customAgent) {
   const nodeList = buildNodeList(graph);
   const instructions = SHARED_INSTRUCTIONS.replace('{NODE_LIST}', nodeList);
-  return `${AGENT_ROLES[agentType]}\n\n${instructions}`;
+  const role = agentType === 'custom'
+    ? buildCustomAgentRole(customAgent)
+    : AGENT_ROLES[agentType];
+  return `${role}\n\n${instructions}`;
 }

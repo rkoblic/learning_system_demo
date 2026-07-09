@@ -258,6 +258,14 @@ export default function KnowledgeGraph({ graph, evidenceMap, currentNode }) {
               {tooltip.node.description}
             </p>
           )}
+          {tooltip.node.win_condition && (
+            <div style={{ marginBottom: 6 }}>
+              <strong style={{ color: '#059669' }}>Win condition:</strong>
+              <p style={{ color: '#334155', lineHeight: 1.5, margin: '2px 0 0' }}>
+                {tooltip.node.win_condition}
+              </p>
+            </div>
+          )}
           {tooltip.node.misconceptions?.length > 0 && (
             <div>
               <strong style={{ color: '#ef4444' }}>Common misconceptions:</strong>

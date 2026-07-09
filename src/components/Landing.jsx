@@ -9,6 +9,7 @@ For each concept, identify:
 - A type (learning_objective, concept, or skill)
 - A description
 - Common student misconceptions (if applicable)
+- A win condition: one explicit sentence describing what success looks like for this concept, written so an AI could judge it (don't leave a vague word like "strong" or "clear" undefined)
 
 For relationships between concepts, identify:
 - Source and target node IDs
@@ -18,18 +19,41 @@ For relationships between concepts, identify:
 Output ONLY valid JSON in this exact format:
 {
   "metadata": { "title": "...", "domain": "..." },
-  "nodes": [ { "id": "...", "label": "...", "type": "...", "description": "...", "misconceptions": ["..."] } ],
+  "nodes": [ { "id": "...", "label": "...", "type": "...", "description": "...", "win_condition": "...", "misconceptions": ["..."] } ],
   "edges": [ { "source": "...", "target": "...", "relationship": "...", "description": "..." } ]
 }
 
 Here is my learning objective / syllabus excerpt:
 [PASTE YOUR CONTENT HERE]`;
 
+const RUBRIC_PROMPT_TEMPLATE = `Here is my knowledge graph JSON. Add a "win_condition" to each node that doesn't have one.
+
+A win condition is the machine-readable version of a rubric criterion: one explicit sentence describing what success looks like for that concept, written for an AI to judge against. Human rubrics lean on tacit words ("poses a STRONG research question") that a human grader fills in with judgment. Make that judgment explicit instead — spell out exactly what "strong" means here, name the observable things a successful learner does, and leave nothing vague.
+
+Return the SAME JSON with a "win_condition" string added to every node. Change nothing else.
+
+Here is my graph:
+[PASTE YOUR GRAPH JSON HERE]`;
+
+const AGENT_PROMPT_TEMPLATE = `Help me draft the pedagogical principles for a teaching agent — the "rules of the game" it should follow when it assesses and teaches a learner.
+
+Give me a short, concrete list of teaching moves and a tone, for example:
+- When a learner is stuck, ask a guiding question before giving the answer
+- Leave room for productive struggle; don't rescue too early
+- Never confirm a right answer reached through wrong reasoning
+- When a gap appears, trace it back to the missing prerequisite (or explain it directly)
+- Tone: warm and encouraging / neutral and clinical
+
+Base them on how I actually like to teach:
+[DESCRIBE YOUR TEACHING STYLE, OR A COURSE / CONTEXT]
+
+I'll reflect these in the prototype's agent builder (toggles + "other principle"), or paste a full version into its tutor.md editor.`;
+
 export default function Landing({ onSelectDemo, onUploadGraph }) {
   const [showUpload, setShowUpload] = useState(false);
   const [errors, setErrors] = useState([]);
   const [dragging, setDragging] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(null);
   const fileInputRef = useRef(null);
 
   function handleFile(file) {
@@ -64,10 +88,10 @@ export default function Landing({ onSelectDemo, onUploadGraph }) {
     if (file) handleFile(file);
   }
 
-  function copyPrompt() {
-    navigator.clipboard.writeText(PROMPT_TEMPLATE);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  function copyPrompt(key, text) {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 2000);
   }
 
   return (
@@ -139,12 +163,26 @@ export default function Landing({ onSelectDemo, onUploadGraph }) {
             )}
 
             <div style={styles.promptSection}>
-              <p style={styles.promptLabel}>
-                Need a graph? Copy this prompt into Claude to generate one:
+              <p style={styles.promptSectionTitle}>
+                Building your pieces? Copy these prompts into Claude:
               </p>
+
+              <p style={styles.promptLabel}>1. Generate a knowledge graph (the board)</p>
               <pre style={styles.promptBox}>{PROMPT_TEMPLATE}</pre>
-              <button style={styles.copyBtn} onClick={copyPrompt}>
-                {copied ? 'Copied!' : 'Copy prompt'}
+              <button style={styles.copyBtn} onClick={() => copyPrompt('graph', PROMPT_TEMPLATE)}>
+                {copiedKey === 'graph' ? 'Copied!' : 'Copy prompt'}
+              </button>
+
+              <p style={{ ...styles.promptLabel, marginTop: 20 }}>2. Add win conditions to each node (the rubric)</p>
+              <pre style={styles.promptBox}>{RUBRIC_PROMPT_TEMPLATE}</pre>
+              <button style={styles.copyBtn} onClick={() => copyPrompt('rubric', RUBRIC_PROMPT_TEMPLATE)}>
+                {copiedKey === 'rubric' ? 'Copied!' : 'Copy prompt'}
+              </button>
+
+              <p style={{ ...styles.promptLabel, marginTop: 20 }}>3. Draft a teaching agent (the rules of the game)</p>
+              <pre style={styles.promptBox}>{AGENT_PROMPT_TEMPLATE}</pre>
+              <button style={styles.copyBtn} onClick={() => copyPrompt('agent', AGENT_PROMPT_TEMPLATE)}>
+                {copiedKey === 'agent' ? 'Copied!' : 'Copy prompt'}
               </button>
             </div>
 
@@ -244,6 +282,12 @@ const styles = {
   },
   promptSection: {
     marginTop: 24,
+  },
+  promptSectionTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: '#0f172a',
+    marginBottom: 16,
   },
   promptLabel: {
     fontSize: 14,

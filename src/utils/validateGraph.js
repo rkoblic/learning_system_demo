@@ -20,6 +20,9 @@ export function validateGraph(data) {
     if (!node.id) errors.push(`Node at index ${i} is missing a required 'id' field.`);
     if (!node.label) errors.push(`Node at index ${i} is missing a required 'label' field.`);
     if (!node.type) errors.push(`Node at index ${i} is missing a required 'type' field.`);
+    if (node.win_condition !== undefined && typeof node.win_condition !== 'string') {
+      errors.push(`Node '${node.id || `at index ${i}`}' has a 'win_condition' that must be a string (one sentence describing what success looks like).`);
+    }
     if (node.id) {
       if (nodeIds.has(node.id)) {
         duplicateIds.add(node.id);
