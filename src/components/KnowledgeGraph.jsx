@@ -10,7 +10,7 @@ const STATUS_COLORS = {
 
 const CURRENT_COLOR = '#3b82f6';
 
-export default function KnowledgeGraph({ graph, evidenceMap, currentNode }) {
+export default function KnowledgeGraph({ graph, evidenceMap, currentNode, selectable, startNode, onSelectStart }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const simRef = useRef(null);
@@ -276,21 +276,65 @@ export default function KnowledgeGraph({ graph, evidenceMap, currentNode }) {
               </ul>
             </div>
           )}
-          <button
-            onClick={() => setTooltip(null)}
-            style={{
-              marginTop: 8,
-              padding: '4px 10px',
-              fontSize: 12,
-              background: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              borderRadius: 4,
-              cursor: 'pointer',
-              color: '#64748b',
-            }}
-          >
-            Close
-          </button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+            {selectable && onSelectStart && (
+              startNode === tooltip.node.id ? (
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#059669' }}>✓ Agent starts here</span>
+              ) : (
+                <button
+                  onClick={() => { onSelectStart(tooltip.node.id); setTooltip(null); }}
+                  style={{
+                    padding: '5px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    background: '#3b82f6',
+                    border: 'none',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    color: '#ffffff',
+                  }}
+                >
+                  Start assessment here
+                </button>
+              )
+            )}
+            <button
+              onClick={() => setTooltip(null)}
+              style={{
+                padding: '4px 10px',
+                fontSize: 12,
+                background: '#f1f5f9',
+                border: '1px solid #e2e8f0',
+                borderRadius: 4,
+                cursor: 'pointer',
+                color: '#64748b',
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      {selectable && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            right: 8,
+            fontSize: 12,
+            color: startNode ? '#0f172a' : '#64748b',
+            background: 'rgba(255,255,255,0.9)',
+            border: '1px solid #e2e8f0',
+            borderRadius: 6,
+            padding: '6px 10px',
+            pointerEvents: 'none',
+            lineHeight: 1.4,
+          }}
+        >
+          {startNode
+            ? `Agent will start on: ${graph?.nodes.find((n) => n.id === startNode)?.label || startNode} — click another node to change`
+            : 'Optional: click a node to choose where the agent starts'}
         </div>
       )}
     </div>

@@ -48,6 +48,7 @@ const initialState = {
   displayMessages: [], // { role, content } — what the user sees in the chat
   evidenceMap: {}, // nodeId -> { status, evidence, trace_to }
   currentNode: null,
+  startNode: null, // optional: node the user clicked to seed where the agent begins
   toolCallLog: [], // tool calls from the most recent agent turn
   isLoading: false,
   loadingActor: null, // 'agent' | 'learner' | null — who is currently generating
@@ -67,6 +68,7 @@ function reducer(state, action) {
         displayMessages: [],
         evidenceMap: {},
         currentNode: null,
+        startNode: null,
         toolCallLog: [],
         started: false,
       };
@@ -115,6 +117,9 @@ function reducer(state, action) {
     }
     case 'SET_CURRENT_NODE':
       return { ...state, currentNode: action.node_id };
+    case 'SET_START_NODE':
+      // Seed both the start node and the visible focus highlight before the session begins.
+      return { ...state, startNode: action.node_id, currentNode: action.node_id };
     case 'SET_TOOL_LOG':
       return { ...state, toolCallLog: action.log };
     case 'ADD_TOOL_CALL':
@@ -134,6 +139,7 @@ function reducer(state, action) {
         displayMessages: [],
         evidenceMap: {},
         currentNode: null,
+        startNode: null,
         toolCallLog: [],
         started: false,
         demoTurnIndex: 0,
@@ -272,7 +278,13 @@ export default function App() {
       if (state.mode === 'demo') {
         playDemoTurn(0);
       } else {
-        const initMsg = { role: 'user', content: 'Begin the assessment.' };
+        let initContent = 'Begin the assessment.';
+        if (state.startNode) {
+          const node = state.graph?.nodes.find((n) => n.id === state.startNode);
+          const label = node?.label || state.startNode;
+          initContent = `Begin the assessment. Start with the concept "${label}" (node id: ${state.startNode}): set your focus there first, then explore outward from it.`;
+        }
+        const initMsg = { role: 'user', content: initContent };
         dispatch({ type: 'ADD_CONVERSATION_MESSAGES', messages: [initMsg] });
         // Don't add to displayMessages — this is a hidden prompt
         callAgent([initMsg]);
@@ -483,6 +495,9 @@ export default function App() {
               graph={state.graph}
               evidenceMap={state.evidenceMap}
               currentNode={state.currentNode}
+              selectable={!state.started && state.mode !== 'demo'}
+              startNode={state.startNode}
+              onSelectStart={(id) => dispatch({ type: 'SET_START_NODE', node_id: id })}
             />
           </div>
         </div>
