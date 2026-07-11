@@ -202,12 +202,14 @@ export default function Landing({ onSelectDemo, onUploadGraph }) {
 const styles = {
   container: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
     height: '100%',
+    overflowY: 'auto',
+    padding: '32px 20px',
+    boxSizing: 'border-box',
     background: '#f8fafc',
   },
   card: {
+    margin: 'auto',
     maxWidth: 560,
     width: '100%',
     padding: 48,
