@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import * as d3 from 'd3';
 
 const STATUS_COLORS = {
@@ -15,6 +15,23 @@ export default function KnowledgeGraph({ graph, evidenceMap, currentNode, select
   const containerRef = useRef(null);
   const simRef = useRef(null);
   const [tooltip, setTooltip] = useState(null);
+  const tooltipRef = useRef(null);
+  const [tipPos, setTipPos] = useState({ left: 0, top: 0 });
+
+  // After the tooltip renders, measure it and clamp it fully inside the viewport
+  // so tall tooltips (and their buttons) never fall off the bottom/edge.
+  useLayoutEffect(() => {
+    if (!tooltip || !tooltipRef.current) return;
+    const margin = 12;
+    const rect = tooltipRef.current.getBoundingClientRect();
+    let left = tooltip.x + margin;
+    let top = tooltip.y + margin;
+    if (left + rect.width > window.innerWidth - margin) left = window.innerWidth - rect.width - margin;
+    if (top + rect.height > window.innerHeight - margin) top = window.innerHeight - rect.height - margin;
+    left = Math.max(margin, left);
+    top = Math.max(margin, top);
+    setTipPos({ left, top });
+  }, [tooltip]);
 
   useEffect(() => {
     if (!graph || !svgRef.current || !containerRef.current) return;
@@ -228,15 +245,18 @@ export default function KnowledgeGraph({ graph, evidenceMap, currentNode, select
       />
       {tooltip && (
         <div
+          ref={tooltipRef}
           style={{
             position: 'fixed',
-            left: Math.min(tooltip.x + 10, window.innerWidth - 320),
-            top: Math.min(tooltip.y + 10, window.innerHeight - 200),
+            left: tipPos.left,
+            top: tipPos.top,
             background: '#ffffff',
             border: '1px solid #e2e8f0',
             borderRadius: 8,
             padding: 16,
             maxWidth: 300,
+            maxHeight: 'calc(100vh - 24px)',
+            overflowY: 'auto',
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             zIndex: 100,
             fontSize: 14,
