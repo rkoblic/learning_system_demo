@@ -33,13 +33,13 @@ public/
 ```
 
 ## Key Architecture Decisions
-- **Agents use Claude tool_use** — not structured text output. Each agent has 6 tools: `get_node`, `get_connections`, `get_evidence_state`, `update_node_status`, `set_focus_node`, `conclude_assessment`.
+- **Agents use Claude tool_use** — not structured text output. Each agent has 7 tools: `get_node`, `get_connections`, `get_evidence_state`, `record_criterion_results`, `mark_not_assessable`, `set_focus_node`, `conclude_assessment`.
 - **Agentic loop runs client-side** so tool calls can update the UI in real-time. The loop in `runAgentLoop()` calls the API, processes tool_use blocks, sends results back, and repeats until the agent produces a text-only response. Text is captured from every iteration to prevent empty responses.
 - **API key is server-side only** — the Vercel serverless function proxies all Claude API calls. Never expose the key in client code.
 - **Rate limiting** — the serverless function rate-limits at 30 requests/minute/IP. Sessions are capped at 10 turns on the client side.
 - **Demo mode** plays back a scripted conversation with no API calls — only available with the preloaded OB graph. Safety net for live demos.
 - **State management** uses useReducer in App.jsx. `conversation` tracks API message history; `displayMessages` tracks what the user sees in the chat.
-- **Score contrast view** computes a dynamic score from the evidence map (demonstrated = full credit, in_progress = half, gap = zero) rather than using a hardcoded value.
+- **Binary assessment** records Meets/Does Not Meet with cited evidence for every essential Skill criterion. The application derives the overall performance result; Not Assessable remains outside the binary result.
 
 ## Running Locally
 ```bash

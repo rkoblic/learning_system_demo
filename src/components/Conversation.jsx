@@ -15,7 +15,9 @@ const TOOL_LABELS = {
   get_node: 'Inspect node',
   get_connections: 'Check connections',
   get_evidence_state: 'Review evidence',
-  update_node_status: 'Update evidence',
+  record_criterion_results: 'Record binary results',
+  mark_not_assessable: 'Mark not assessable',
+  update_node_status: 'Update legacy evidence',
   set_focus_node: 'Set focus',
   conclude_assessment: 'Conclude',
 };
@@ -24,7 +26,9 @@ const TOOL_COLORS = {
   get_node: '#8b5cf6',
   get_connections: '#6366f1',
   get_evidence_state: '#3b82f6',
-  update_node_status: '#22c55e',
+  record_criterion_results: '#22c55e',
+  mark_not_assessable: '#8b5cf6',
+  update_node_status: '#64748b',
   set_focus_node: '#f59e0b',
   conclude_assessment: '#ef4444',
 };
@@ -133,6 +137,18 @@ export default function Conversation({
                       {tc.input.evidence}
                     </div>
                   )}
+                  {tc.name === 'record_criterion_results' && (
+                    <div style={styles.toolDetail}>
+                      {tc.input.criterion_results.map((result) => (
+                        <div key={result.criterion_id}>
+                          {result.result === 'meets' ? '✓' : '✗'} {result.criterion_id}: {result.evidence}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {tc.name === 'mark_not_assessable' && (
+                    <div style={styles.toolDetail}>— {tc.input.reason}</div>
+                  )}
                   {tc.name === 'set_focus_node' && tc.input.reason && (
                     <div style={styles.toolDetail}>{tc.input.reason}</div>
                   )}
@@ -183,6 +199,10 @@ function formatToolInput(name, input) {
       return input.node_id;
     case 'update_node_status':
       return `${input.node_id} → ${input.status}`;
+    case 'record_criterion_results':
+      return `${input.node_id} → ${input.criterion_results.length} criterion result${input.criterion_results.length === 1 ? '' : 's'}`;
+    case 'mark_not_assessable':
+      return `${input.node_id} → not assessable`;
     case 'get_evidence_state':
       return '';
     case 'conclude_assessment':

@@ -9,7 +9,16 @@ For each concept, identify:
 - A type (learning_objective, concept, or skill)
 - A description
 - Common student misconceptions (if applicable)
-- A win condition: one explicit sentence describing what success looks like for this concept, written so an AI could judge it (don't leave a vague word like "strong" or "clear" undefined)
+
+For every node whose type is "skill", also add a rubric with:
+- 2–5 essential binary criteria
+- A unique ID and short label for each criterion
+- "meets_when": the observable evidence required to Meet
+- "does_not_meet_when": what is absent or insufficient when the criterion Does Not Meet
+- "essential": true
+- "combination_rule": "all_essential" at the rubric level
+
+Do not add rubrics to concept or learning_objective nodes unless the source explicitly treats them as independently assessable. Avoid arbitrary counts, generic value words, overlapping checks, and requirements that exceed the named skill.
 
 For relationships between concepts, identify:
 - Source and target node IDs
@@ -19,18 +28,53 @@ For relationships between concepts, identify:
 Output ONLY valid JSON in this exact format:
 {
   "metadata": { "title": "...", "domain": "..." },
-  "nodes": [ { "id": "...", "label": "...", "type": "...", "description": "...", "win_condition": "...", "misconceptions": ["..."] } ],
+  "nodes": [
+    {
+      "id": "...",
+      "label": "...",
+      "type": "skill",
+      "description": "...",
+      "rubric": {
+        "criteria": [
+          {
+            "id": "...",
+            "label": "...",
+            "meets_when": "...",
+            "does_not_meet_when": "...",
+            "essential": true
+          }
+        ],
+        "combination_rule": "all_essential"
+      },
+      "misconceptions": ["..."]
+    }
+  ],
   "edges": [ { "source": "...", "target": "...", "relationship": "...", "description": "..." } ]
 }
 
 Here is my learning objective / syllabus excerpt:
 [PASTE YOUR CONTENT HERE]`;
 
-const RUBRIC_PROMPT_TEMPLATE = `Here is my knowledge graph JSON. Add a "win_condition" to each node that doesn't have one.
+const RUBRIC_PROMPT_TEMPLATE = `Here is my knowledge graph JSON. Add a binary rubric to every node whose type is "skill". Change no other nodes or relationships.
 
-A win condition is the machine-readable version of a rubric criterion: one explicit sentence describing what success looks like for that concept, written for an AI to judge against. Human rubrics lean on tacit words ("poses a STRONG research question") that a human grader fills in with judgment. Make that judgment explicit instead — spell out exactly what "strong" means here, name the observable things a successful learner does, and leave nothing vague.
+For each Skill, create 2–5 essential criteria. Each criterion must have:
+- A unique lowercase, hyphenated "id"
+- A short "label"
+- A "meets_when" description naming observable evidence in the learner's performance
+- A "does_not_meet_when" description naming what would be absent or insufficient
+- "essential": true
 
-Return the SAME JSON with a "win_condition" string added to every node. Change nothing else.
+At the rubric level add "combination_rule": "all_essential". The performance Meets only when every essential criterion Meets.
+
+Audit your own criteria before returning them:
+- Remove arbitrary counts unless the Skill itself requires a count.
+- Merge overlapping criteria.
+- Exclude requirements that belong to a different or more advanced Skill.
+- Make sure a weak, formulaic response cannot pass by repeating keywords.
+- Make sure an unconventional strong response can still pass.
+- Make each criterion specific enough that an evaluator can cite the learner behavior supporting the result.
+
+Return the SAME JSON with rubrics added to Skill nodes. Output only valid JSON and change nothing else.
 
 Here is my graph:
 [PASTE YOUR GRAPH JSON HERE]`;
@@ -173,7 +217,7 @@ export default function Landing({ onSelectDemo, onUploadGraph }) {
                 {copiedKey === 'graph' ? 'Copied!' : 'Copy prompt'}
               </button>
 
-              <p style={{ ...styles.promptLabel, marginTop: 20 }}>2. Add win conditions to each node (the rubric)</p>
+              <p style={{ ...styles.promptLabel, marginTop: 20 }}>2. Add binary criteria to every Skill (the rubric)</p>
               <pre style={styles.promptBox}>{RUBRIC_PROMPT_TEMPLATE}</pre>
               <button style={styles.copyBtn} onClick={() => copyPrompt('rubric', RUBRIC_PROMPT_TEMPLATE)}>
                 {copiedKey === 'rubric' ? 'Copied!' : 'Copy prompt'}

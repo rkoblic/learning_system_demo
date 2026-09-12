@@ -9,6 +9,8 @@ import AgentBuilder from './components/AgentBuilder.jsx';
 import obGraph from './data/ob-graph.json';
 import { sendMessage, runAgentLoop } from './utils/api';
 import { buildAgentSystemPrompt, TOOL_DEFINITIONS } from './prompts/agents';
+import { normalizeRubric, validateCriterionSubmission } from './utils/rubric';
+import { validateGraph } from './utils/validateGraph';
 import { SIMULATED_LEARNER_PROMPT, buildCustomLearnerPrompt } from './prompts/simulated-learner';
 import { DEMO_SCRIPT } from './data/demo-script';
 import tutorStarter from './prompts/tutor.md?raw';
@@ -46,7 +48,7 @@ const initialState = {
   customAgent: { ...DEFAULT_CUSTOM_AGENT },
   conversation: [], // { role, content, hidden? } — what gets sent to the API
   displayMessages: [], // { role, content } — what the user sees in the chat
-  evidenceMap: {}, // nodeId -> { status, evidence, trace_to }
+  evidenceMap: {}, // nodeId -> current performance evaluation and criterion-level evidence
   currentNode: null,
   startNode: null, // optional: node the user clicked to seed where the agent begins
   toolCallLog: [], // tool calls from the most recent agent turn
@@ -110,7 +112,10 @@ function reducer(state, action) {
       const newMap = { ...state.evidenceMap };
       newMap[action.node_id] = {
         status: action.status,
-        evidence: action.evidence,
+        performance_result: action.performance_result || null,
+        criterion_results: action.criterion_results || [],
+        summary: action.summary || '',
+        reason: action.reason || '',
         trace_to: action.trace_to || null,
       };
       return { ...state, evidenceMap: newMap };
@@ -156,6 +161,7 @@ export default function App() {
   const [showUnderTheHood, setShowUnderTheHood] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const startedRef = useRef(false);
+  const graphFileInputRef = useRef(null);
   // Refs to give the tool callback access to current state without stale closures
   const graphRef = useRef(null);
   const evidenceMapRef = useRef({});
@@ -177,7 +183,7 @@ export default function App() {
           label: node.label,
           type: node.type,
           description: node.description || 'No description available',
-          win_condition: node.win_condition || null,
+          rubric: normalizeRubric(node),
           difficulty: node.difficulty || 'not specified',
           estimated_minutes: node.estimated_minutes || null,
           misconceptions: node.misconceptions || [],
@@ -204,20 +210,77 @@ export default function App() {
           node_id: n.id,
           label: n.label,
           status: evidenceMap[n.id]?.status || 'not_assessed',
-          evidence: evidenceMap[n.id]?.evidence || null,
+          performance_result: evidenceMap[n.id]?.performance_result || null,
+          criterion_results: evidenceMap[n.id]?.criterion_results || [],
+          summary: evidenceMap[n.id]?.summary || '',
+          reason: evidenceMap[n.id]?.reason || '',
           trace_to: evidenceMap[n.id]?.trace_to || null,
         }));
         return JSON.stringify({ evidence: state_map });
       }
-      case 'update_node_status': {
+      case 'record_criterion_results': {
+        const node = graph?.nodes.find((n) => n.id === input.node_id);
+        if (!node) return JSON.stringify({ error: `Node '${input.node_id}' not found` });
+        const evaluation = validateCriterionSubmission(node, input.criterion_results);
+        if (evaluation.error) return JSON.stringify({ error: evaluation.error });
         dispatch({
           type: 'UPDATE_EVIDENCE',
           node_id: input.node_id,
-          status: input.status,
-          evidence: input.evidence,
+          status: 'assessed',
+          performance_result: evaluation.performanceResult,
+          criterion_results: evaluation.criterionResults,
+          summary: input.summary || '',
           trace_to: input.trace_to || null,
         });
-        return JSON.stringify({ success: true, node_id: input.node_id, status: input.status });
+        return JSON.stringify({
+          success: true,
+          node_id: input.node_id,
+          performance_result: evaluation.performanceResult,
+          combination_rule: evaluation.rubric.combination_rule,
+        });
+      }
+      case 'mark_not_assessable': {
+        const node = graph?.nodes.find((n) => n.id === input.node_id);
+        if (!node) return JSON.stringify({ error: `Node '${input.node_id}' not found` });
+        if (!normalizeRubric(node)) {
+          return JSON.stringify({ error: `Node '${input.node_id}' does not have an assessable rubric.` });
+        }
+        if (typeof input.reason !== 'string' || !input.reason.trim()) {
+          return JSON.stringify({ error: 'A reason is required for Not Assessable.' });
+        }
+        dispatch({
+          type: 'UPDATE_EVIDENCE',
+          node_id: input.node_id,
+          status: 'not_assessable',
+          reason: input.reason.trim(),
+        });
+        return JSON.stringify({ success: true, node_id: input.node_id, status: 'not_assessable' });
+      }
+      // Compatibility for the pre-scripted Organizational Behavior demo.
+      case 'update_node_status': {
+        const node = graph?.nodes.find((n) => n.id === input.node_id);
+        const rubric = normalizeRubric(node);
+        const result = input.status === 'demonstrated'
+          ? 'meets'
+          : input.status === 'gap_detected'
+            ? 'does_not_meet'
+            : null;
+        dispatch({
+          type: 'UPDATE_EVIDENCE',
+          node_id: input.node_id,
+          status: result ? 'assessed' : 'collecting',
+          performance_result: result,
+          criterion_results: result && rubric
+            ? rubric.criteria.map((criterion) => ({
+                criterion_id: criterion.id,
+                result,
+                evidence: input.evidence,
+              }))
+            : [],
+          summary: input.evidence || '',
+          trace_to: input.trace_to || null,
+        });
+        return JSON.stringify({ success: true, node_id: input.node_id, legacy_status: input.status });
       }
       case 'set_focus_node': {
         dispatch({ type: 'SET_CURRENT_NODE', node_id: input.node_id });
@@ -232,7 +295,12 @@ export default function App() {
   }, []);
 
   const callAgent = useCallback(async (conversationMessages) => {
-    const systemPrompt = buildAgentSystemPrompt(state.agent, state.graph, state.customAgent);
+    const systemPrompt = buildAgentSystemPrompt(
+      state.agent,
+      state.graph,
+      state.customAgent,
+      state.startNode
+    );
     dispatch({ type: 'SET_LOADING', isLoading: true, actor: 'agent' });
     dispatch({ type: 'SET_TOOL_LOG', log: [] });
 
@@ -269,7 +337,7 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_LOADING', isLoading: false });
     }
-  }, [state.agent, state.graph, state.customAgent, executeTool]);
+  }, [state.agent, state.graph, state.customAgent, state.startNode, executeTool]);
 
   // Auto-send first agent message when session starts
   useEffect(() => {
@@ -314,6 +382,26 @@ export default function App() {
 
   const turnCount = state.displayMessages.filter((m) => m.role === 'user').length;
   const turnLimitReached = turnCount >= MAX_TURNS;
+
+  const handleReplaceGraph = useCallback((file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const graph = JSON.parse(event.target.result);
+        const errors = validateGraph(graph);
+        if (errors.length > 0) {
+          window.alert(`This graph could not be loaded:\n\n${errors.join('\n')}`);
+          return;
+        }
+        startedRef.current = false;
+        dispatch({ type: 'LOAD_GRAPH', graph });
+      } catch {
+        window.alert('This file is not valid JSON.');
+      }
+    };
+    reader.readAsText(file);
+  }, []);
 
   const handleSendMessage = useCallback(async (text) => {
     if (turnLimitReached) return;
@@ -445,6 +533,24 @@ export default function App() {
               Configure
             </button>
           )}
+          <button
+            style={styles.newBtn}
+            onClick={() => graphFileInputRef.current?.click()}
+            disabled={state.isLoading}
+          >
+            Replace graph
+          </button>
+          <input
+            ref={graphFileInputRef}
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) handleReplaceGraph(file);
+              event.target.value = '';
+            }}
+          />
           <button style={styles.newBtn} onClick={() => setShowUnderTheHood(true)}>
             Under the Hood
           </button>
@@ -530,7 +636,7 @@ export default function App() {
       </div>
       {showUnderTheHood && (
         <UnderTheHood
-          systemPrompt={buildAgentSystemPrompt(state.agent, state.graph, state.customAgent)}
+          systemPrompt={buildAgentSystemPrompt(state.agent, state.graph, state.customAgent, state.startNode)}
           learnerPrompt={
             state.mode === 'custom'
               ? buildCustomLearnerPrompt(state.customLearner)

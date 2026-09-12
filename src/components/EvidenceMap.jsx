@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { normalizeRubric } from '../utils/rubric';
 
 const STATUS_CONFIG = {
-  demonstrated: { icon: '✓', color: '#22c55e', section: 'assessed' },
-  gap_detected: { icon: '✗', color: '#ef4444', section: 'assessed' },
-  in_progress: { icon: '→', color: '#3b82f6', section: 'in_progress' },
+  assessed: { icon: '✓', color: '#22c55e', section: 'assessed' },
+  collecting: { icon: '→', color: '#3b82f6', section: 'in_progress' },
+  not_assessable: { icon: '—', color: '#8b5cf6', section: 'assessed' },
   not_assessed: { icon: '○', color: '#94a3b8', section: 'not_assessed' },
 };
 
 export default function EvidenceMap({ graph, evidenceMap }) {
-  const [showContrast, setShowContrast] = useState(false);
   const [flashNodes, setFlashNodes] = useState(new Set());
   const prevMapRef = useRef({});
 
@@ -33,68 +33,24 @@ export default function EvidenceMap({ graph, evidenceMap }) {
 
   const nodes = graph.nodes.map((n) => ({
     ...n,
-    win_condition: n.win_condition || null,
+    rubric: normalizeRubric(n),
     status: evidenceMap[n.id]?.status || 'not_assessed',
-    evidence: evidenceMap[n.id]?.evidence || null,
+    performance_result: evidenceMap[n.id]?.performance_result || null,
+    criterion_results: evidenceMap[n.id]?.criterion_results || [],
+    summary: evidenceMap[n.id]?.summary || '',
+    reason: evidenceMap[n.id]?.reason || '',
     trace_to: evidenceMap[n.id]?.trace_to || null,
   }));
 
   const assessed = nodes.filter(
-    (n) => n.status === 'demonstrated' || n.status === 'gap_detected'
+    (n) => n.status === 'assessed' || n.status === 'not_assessable'
   );
-  const inProgress = nodes.filter((n) => n.status === 'in_progress');
+  const inProgress = nodes.filter((n) => n.status === 'collecting');
   const notAssessed = nodes.filter((n) => n.status === 'not_assessed');
 
   // Find label for trace_to node
   const nodeLabels = {};
   graph.nodes.forEach((n) => { nodeLabels[n.id] = n.label; });
-
-  // Compute a traditional-style score from the evidence map
-  // Demonstrated = full credit, in_progress = half credit (benefit of the doubt),
-  // gap_detected = 0, not_assessed = excluded (traditional tests only score what's asked)
-  const scorableNodes = nodes.filter((n) => n.status !== 'not_assessed');
-  let score;
-  if (scorableNodes.length === 0) {
-    score = 0;
-  } else {
-    const points = scorableNodes.reduce((sum, n) => {
-      if (n.status === 'demonstrated') return sum + 1;
-      if (n.status === 'in_progress') return sum + 0.5;
-      return sum;
-    }, 0);
-    score = Math.round((points / scorableNodes.length) * 100);
-  }
-
-  if (showContrast) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.contrastView}>
-          <div style={styles.contrastLeft}>
-            <div style={styles.scoreValue}>{score}%</div>
-            <div style={styles.scoreLabel}>What a score tells you</div>
-          </div>
-          <div style={styles.contrastDivider} />
-          <div style={styles.contrastRight}>
-            <div style={styles.contrastRightLabel}>What an evidence map tells you</div>
-            <div style={styles.contrastList}>
-              {assessed.map((n) => (
-                <CompactNode key={n.id} node={n} nodeLabels={nodeLabels} />
-              ))}
-              {inProgress.map((n) => (
-                <CompactNode key={n.id} node={n} nodeLabels={nodeLabels} />
-              ))}
-              {notAssessed.map((n) => (
-                <CompactNode key={n.id} node={n} nodeLabels={nodeLabels} />
-              ))}
-            </div>
-          </div>
-        </div>
-        <button style={styles.contrastBtn} onClick={() => setShowContrast(false)}>
-          Back to evidence map
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div style={styles.container}>
@@ -121,9 +77,6 @@ export default function EvidenceMap({ graph, evidenceMap }) {
           </Section>
         )}
       </div>
-      <button style={styles.contrastBtn} onClick={() => setShowContrast(true)}>
-        Compare to traditional score
-      </button>
     </div>
   );
 }
@@ -138,7 +91,29 @@ function Section({ title, children }) {
 }
 
 function NodeEntry({ node, nodeLabels, flash }) {
-  const config = STATUS_CONFIG[node.status];
+  const config = node.status === 'assessed' && node.performance_result === 'does_not_meet'
+    ? { icon: '✗', color: '#ef4444' }
+    : STATUS_CONFIG[node.status];
+  const resultsById = new Map(
+    node.criterion_results.map((result) => [result.criterion_id, result])
+  );
+  const overall = node.status === 'not_assessable'
+    ? 'NOT ASSESSABLE'
+    : node.performance_result === 'meets'
+      ? 'MEETS'
+      : node.performance_result === 'does_not_meet'
+        ? 'DOES NOT MEET'
+        : node.status === 'collecting'
+          ? 'GATHERING EVIDENCE'
+          : '';
+  const overallColor = node.performance_result === 'does_not_meet'
+    ? '#dc2626'
+    : node.status === 'not_assessable'
+      ? '#7c3aed'
+      : node.performance_result === 'meets'
+        ? '#15803d'
+        : '#64748b';
+
   return (
     <div
       style={{
@@ -150,30 +125,35 @@ function NodeEntry({ node, nodeLabels, flash }) {
       <div style={styles.nodeHeader}>
         <span style={{ ...styles.statusIcon, color: config.color }}>{config.icon}</span>
         <span style={styles.nodeLabel}>{node.label}</span>
+        {overall && <span style={{ ...styles.overallBadge, color: overallColor }}>{overall}</span>}
       </div>
-      {node.evidence && <p style={styles.evidence}>{node.evidence}</p>}
-      {node.win_condition && node.status !== 'not_assessed' && (
-        <p style={styles.winCondition}>
-          <span style={styles.winConditionLabel}>Win condition:</span> {node.win_condition}
-        </p>
+      {node.summary && <p style={styles.evidence}>{node.summary}</p>}
+      {node.reason && <p style={styles.notAssessableReason}>{node.reason}</p>}
+      {node.rubric && node.status !== 'not_assessed' && (
+        <div style={styles.criteriaList}>
+          {node.rubric.criteria.map((criterion) => {
+            const result = resultsById.get(criterion.id);
+            const icon = result?.result === 'meets' ? '✓' : result?.result === 'does_not_meet' ? '✗' : '○';
+            const color = result?.result === 'meets' ? '#16a34a' : result?.result === 'does_not_meet' ? '#dc2626' : '#94a3b8';
+            return (
+              <div key={criterion.id} style={styles.criterionEntry}>
+                <div style={styles.criterionHeader}>
+                  <span style={{ color, fontWeight: 800 }}>{icon}</span>
+                  <span style={styles.criterionLabel}>{criterion.label}</span>
+                  <span style={{ ...styles.criterionResult, color }}>
+                    {result?.result === 'meets' ? 'MEETS' : result?.result === 'does_not_meet' ? 'DOES NOT MEET' : 'NOT JUDGED'}
+                  </span>
+                </div>
+                {result?.evidence && <p style={styles.criterionEvidence}>{result.evidence}</p>}
+              </div>
+            );
+          })}
+        </div>
       )}
-      {node.status === 'gap_detected' && node.trace_to && (
+      {node.performance_result === 'does_not_meet' && node.trace_to && (
         <p style={styles.traceTo}>
           Traces to: <strong>{nodeLabels[node.trace_to] || node.trace_to}</strong>
         </p>
-      )}
-    </div>
-  );
-}
-
-function CompactNode({ node, nodeLabels }) {
-  const config = STATUS_CONFIG[node.status];
-  return (
-    <div style={styles.compactNode}>
-      <span style={{ ...styles.statusIcon, color: config.color, fontSize: 13 }}>{config.icon}</span>
-      <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{node.label}</span>
-      {node.evidence && (
-        <span style={{ fontSize: 12, color: '#64748b', marginLeft: 4 }}>— {node.evidence}</span>
       )}
     </div>
   );
@@ -220,6 +200,13 @@ const styles = {
     fontSize: 14,
     fontWeight: 600,
     color: '#1e293b',
+    flex: 1,
+  },
+  overallBadge: {
+    fontSize: 10,
+    fontWeight: 800,
+    letterSpacing: '0.04em',
+    whiteSpace: 'nowrap',
   },
   evidence: {
     fontSize: 13,
@@ -227,6 +214,47 @@ const styles = {
     marginTop: 4,
     marginLeft: 28,
     lineHeight: 1.5,
+  },
+  notAssessableReason: {
+    fontSize: 12,
+    color: '#6d28d9',
+    margin: '6px 0 0 28px',
+    lineHeight: 1.45,
+  },
+  criteriaList: {
+    margin: '8px 0 0 28px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  criterionEntry: {
+    padding: '7px 8px',
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: 6,
+  },
+  criterionHeader: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: 6,
+  },
+  criterionLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#334155',
+  },
+  criterionResult: {
+    fontSize: 9,
+    fontWeight: 800,
+    letterSpacing: '0.03em',
+    whiteSpace: 'nowrap',
+  },
+  criterionEvidence: {
+    margin: '4px 0 0 18px',
+    color: '#64748b',
+    fontSize: 11,
+    lineHeight: 1.45,
   },
   traceTo: {
     fontSize: 13,

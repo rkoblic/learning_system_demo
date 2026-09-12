@@ -1,11 +1,13 @@
 import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import * as d3 from 'd3';
+import { normalizeRubric } from '../utils/rubric';
 
 const STATUS_COLORS = {
   not_assessed: '#94a3b8',
-  in_progress: '#f59e0b',
-  demonstrated: '#22c55e',
-  gap_detected: '#ef4444',
+  collecting: '#f59e0b',
+  meets: '#22c55e',
+  does_not_meet: '#ef4444',
+  not_assessable: '#8b5cf6',
 };
 
 const CURRENT_COLOR = '#3b82f6';
@@ -17,6 +19,7 @@ export default function KnowledgeGraph({ graph, evidenceMap, currentNode, select
   const [tooltip, setTooltip] = useState(null);
   const tooltipRef = useRef(null);
   const [tipPos, setTipPos] = useState({ left: 0, top: 0 });
+  const tooltipRubric = tooltip ? normalizeRubric(tooltip.node) : null;
 
   // After the tooltip renders, measure it and clamp it fully inside the viewport
   // so tall tooltips (and their buttons) never fall off the bottom/edge.
@@ -278,12 +281,16 @@ export default function KnowledgeGraph({ graph, evidenceMap, currentNode, select
               {tooltip.node.description}
             </p>
           )}
-          {tooltip.node.win_condition && (
+          {tooltipRubric && (
             <div style={{ marginBottom: 6 }}>
-              <strong style={{ color: '#059669' }}>Win condition:</strong>
-              <p style={{ color: '#334155', lineHeight: 1.5, margin: '2px 0 0' }}>
-                {tooltip.node.win_condition}
-              </p>
+              <strong style={{ color: '#059669' }}>Binary criteria:</strong>
+              <ul style={{ color: '#334155', lineHeight: 1.45, margin: '4px 0 0 18px', padding: 0 }}>
+                {tooltipRubric.criteria.map((criterion) => (
+                  <li key={criterion.id} style={{ marginBottom: 5 }}>
+                    <strong>{criterion.label}:</strong> {criterion.meets_when}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           {tooltip.node.misconceptions?.length > 0 && (
@@ -363,6 +370,9 @@ export default function KnowledgeGraph({ graph, evidenceMap, currentNode, select
 
 function getNodeColor(nodeId, evidenceMap, currentNode) {
   if (currentNode === nodeId) return CURRENT_COLOR;
-  const status = evidenceMap[nodeId]?.status;
-  return STATUS_COLORS[status] || STATUS_COLORS.not_assessed;
+  const evidence = evidenceMap[nodeId];
+  if (evidence?.status === 'assessed') {
+    return STATUS_COLORS[evidence.performance_result] || STATUS_COLORS.not_assessed;
+  }
+  return STATUS_COLORS[evidence?.status] || STATUS_COLORS.not_assessed;
 }

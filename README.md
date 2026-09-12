@@ -4,9 +4,9 @@ An interactive prototype demonstrating three interconnected layers of AI-in-educ
 
 - **Knowledge Graph** — structured curriculum visualized as a force-directed graph
 - **AI Agent** — adaptive assessment and tutoring powered by Claude
-- **Evidence Map** — structured record of learner understanding, updated in real time
+- **Evidence Map** — criterion-level binary judgments with cited learner evidence
 
-Built for live demos and hands-on exploration. Three agent strategies show different approaches to the same assessment task — and a "Compare to traditional score" view makes the case for evidence-rich assessment over single scores.
+Built for live demos and hands-on exploration. Three agent strategies show different approaches to the same assessment task, while criterion-level evidence makes their judgments inspectable.
 
 ## Quick Start
 
@@ -36,7 +36,7 @@ Open [http://localhost:3000](http://localhost:3000).
 |-------|--------------|
 | **Knowledge Graph** (left) | Interactive d3-force visualization of curriculum concepts and their relationships. Nodes change color as the agent assesses them. |
 | **Conversation** (center) | Chat interface where the agent converses with a learner. An expandable "Agent tool use" panel shows the agent's tool calls in real time. |
-| **Evidence Map** (right) | Structured record of what the learner knows, organized by status: assessed, in progress, not yet assessed. |
+| **Evidence Map** (right) | Binary criterion results for each assessed Skill, with cited evidence and a system-derived performance result. |
 
 ### The Three Agents
 
@@ -52,14 +52,15 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Agent Tool Use
 
-Each agent is a proper tool-using agent with six tools:
+Each agent is a proper tool-using agent with seven tools:
 
 | Tool | Purpose |
 |------|---------|
 | `get_node` | Inspect a concept's details, difficulty, and common misconceptions |
 | `get_connections` | See how concepts relate (prerequisites, dependencies) |
-| `get_evidence_state` | Review the current assessment state |
-| `update_node_status` | Record evidence about a learner's understanding |
+| `get_evidence_state` | Review current criterion results and performance outcomes |
+| `record_criterion_results` | Record Meets/Does Not Meet plus evidence for every essential criterion |
+| `mark_not_assessable` | Record that the opportunity did not make the Skill observable |
 | `set_focus_node` | Shift attention to a new concept (updates the graph visualization) |
 | `conclude_assessment` | Signal that assessment is complete |
 
@@ -74,19 +75,37 @@ Click **"Under the Hood"** in the toolbar to inspect the system prompts, tool de
 
 Click "Upload your own graph" on the landing page to use a custom curriculum. A **downloadable JSON template** is provided on the upload page, along with a prompt you can paste into Claude to generate a graph from any syllabus or learning objective.
 
-Graphs are JSON files with `nodes` and `edges`:
+Graphs are JSON files with `nodes` and `edges`. Skill nodes may include binary rubrics:
 
 ```json
 {
   "metadata": { "title": "My Course", "domain": "Subject" },
   "nodes": [
-    { "id": "concept-1", "label": "First Concept", "type": "concept" }
+    {
+      "id": "skill-1",
+      "label": "Applied Skill",
+      "type": "skill",
+      "rubric": {
+        "criteria": [
+          {
+            "id": "observable-action",
+            "label": "Observable action",
+            "meets_when": "The performance shows the required action in the supplied situation.",
+            "does_not_meet_when": "The action is absent or merely asserted.",
+            "essential": true
+          }
+        ],
+        "combination_rule": "all_essential"
+      }
+    }
   ],
   "edges": [
     { "source": "concept-1", "target": "concept-2", "relationship": "prerequisite" }
   ]
 }
 ```
+
+The application derives the overall performance result: all essential criteria must Meet. `Not Assessable` is separate and is used only when the evidence opportunity did not give the learner a fair chance to demonstrate the Skill.
 
 ## Deploy to Vercel
 

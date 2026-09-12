@@ -1,7 +1,9 @@
 // Simple in-memory rate limiter (per IP, resets on cold start)
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 30; // max requests per window per IP
+// Tool-using classroom sessions can generate several requests per learner turn,
+// and many students may share one campus IP. Override in Vercel if needed.
+const RATE_LIMIT_MAX = Number(process.env.CLASSROOM_RATE_LIMIT || 300);
 
 function checkRateLimit(ip) {
   const now = Date.now();

@@ -11,7 +11,6 @@
       "label": "Primary Learning Objective",
       "type": "learning_objective",
       "description": "Full description of what the learner should be able to do (optional — used in agent context and tooltips)",
-      "win_condition": "One explicit sentence describing what success looks like, written for an AI (optional — used as the assessment standard and shown on the evidence map). Leave no tacit word like 'strong' or 'clear' undefined.",
       "difficulty": "advanced",
       "estimated_minutes": 60,
       "misconceptions": [
@@ -24,7 +23,6 @@
       "label": "Foundation Concept",
       "type": "concept",
       "description": "A prerequisite concept that supports the learning objective",
-      "win_condition": "The learner succeeds when they can [do the specific, observable thing that proves they've grasped this concept].",
       "difficulty": "foundational",
       "estimated_minutes": 20,
       "misconceptions": [
@@ -44,6 +42,25 @@
       "label": "Applied Skill",
       "type": "skill",
       "description": "A practical skill that requires understanding of the concepts above",
+      "rubric": {
+        "criteria": [
+          {
+            "id": "observable-action",
+            "label": "Observable action",
+            "meets_when": "The performance shows the specific action required by this skill in the supplied situation.",
+            "does_not_meet_when": "The action is absent, merely asserted, or left for the evaluator to infer.",
+            "essential": true
+          },
+          {
+            "id": "case-specific-reasoning",
+            "label": "Case-specific reasoning",
+            "meets_when": "The performance connects the action to concrete features of the supplied situation.",
+            "does_not_meet_when": "The response relies on generic language that could apply unchanged to a materially different situation.",
+            "essential": true
+          }
+        ],
+        "combination_rule": "all_essential"
+      },
       "difficulty": "intermediate",
       "estimated_minutes": 30
     }
