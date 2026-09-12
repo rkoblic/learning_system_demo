@@ -10,16 +10,6 @@ For each concept, identify:
 - A description
 - Common student misconceptions (if applicable)
 
-For every node whose type is "skill", also add a rubric with:
-- 2–5 essential binary criteria
-- A unique ID and short label for each criterion
-- "meets_when": the observable evidence required to Meet
-- "does_not_meet_when": what is absent or insufficient when the criterion Does Not Meet
-- "essential": true
-- "combination_rule": "all_essential" at the rubric level
-
-Do not add rubrics to concept or learning_objective nodes unless the source explicitly treats them as independently assessable. Avoid arbitrary counts, generic value words, overlapping checks, and requirements that exceed the named skill.
-
 For relationships between concepts, identify:
 - Source and target node IDs
 - Relationship type (prerequisite, builds-on, breaks-into, or enables)
@@ -28,29 +18,11 @@ For relationships between concepts, identify:
 Output ONLY valid JSON in this exact format:
 {
   "metadata": { "title": "...", "domain": "..." },
-  "nodes": [
-    {
-      "id": "...",
-      "label": "...",
-      "type": "skill",
-      "description": "...",
-      "rubric": {
-        "criteria": [
-          {
-            "id": "...",
-            "label": "...",
-            "meets_when": "...",
-            "does_not_meet_when": "...",
-            "essential": true
-          }
-        ],
-        "combination_rule": "all_essential"
-      },
-      "misconceptions": ["..."]
-    }
-  ],
+  "nodes": [ { "id": "...", "label": "...", "type": "...", "description": "...", "misconceptions": ["..."] } ],
   "edges": [ { "source": "...", "target": "...", "relationship": "...", "description": "..." } ]
 }
+
+Do not add rubrics, criteria, win conditions, assessment results, or tutor instructions in this step. This output is only the board: nodes and edges.
 
 Here is my learning objective / syllabus excerpt:
 [PASTE YOUR CONTENT HERE]`;
@@ -79,19 +51,24 @@ Return the SAME JSON with rubrics added to Skill nodes. Output only valid JSON a
 Here is my graph:
 [PASTE YOUR GRAPH JSON HERE]`;
 
-const AGENT_PROMPT_TEMPLATE = `Help me draft the pedagogical principles for a teaching agent — the "rules of the game" it should follow when it assesses and teaches a learner.
+const AGENT_PROMPT_TEMPLATE = `Create a complete system prompt for an AI tutor that assesses and teaches a learner using a supplied knowledge graph and binary rubrics.
 
-Give me a short, concrete list of teaching moves and a tone, for example:
-- When a learner is stuck, ask a guiding question before giving the answer
-- Leave room for productive struggle; don't rescue too early
-- Never confirm a right answer reached through wrong reasoning
-- When a gap appears, trace it back to the missing prerequisite (or explain it directly)
-- Tone: warm and encouraging / neutral and clinical
+Return a ready-to-paste tutor.md prompt, not commentary about the prompt and not merely a list of principles. Structure it with clear sections covering:
+- Role and purpose: who the tutor is and what it is trying to help the learner accomplish
+- Opening behavior: how it begins and establishes the task or evidence opportunity
+- Assessment approach: how it gathers observable evidence without inferring what the learner did not show
+- Teaching approach: how it responds when a criterion Does Not Meet, including when to question, explain, challenge, or allow productive struggle
+- Successful performance: what it does when criteria Meet without ending the learning too early
+- Uncertainty: how it distinguishes missing learner evidence from a task that was not assessable
+- Adaptation: how it uses prerequisite relationships and prior evidence to choose a next move
+- Boundaries: what it must not do, including supplying a performance the learner is meant to produce
+- Tone and interaction style
+- Ending behavior: how it summarizes evidence and leaves the learner with a useful next step
 
-Base them on how I actually like to teach:
-[DESCRIBE YOUR TEACHING STYLE, OR A COURSE / CONTEXT]
+Write behavioral instructions specific enough to produce observable differences when the tutor is tested. Do not include JSON schemas, tool definitions, or a copy of the knowledge graph; the application supplies those separately.
 
-I'll reflect these in the prototype's agent builder (toggles + "other principle"), or paste a full version into its tutor.md editor.`;
+Use this teaching context and preference:
+[DESCRIBE THE COURSE, LEARNERS, TEACHING STYLE, AND ANY NON-NEGOTIABLE BEHAVIORS]`;
 
 export default function Landing({ onSelectDemo, onUploadGraph }) {
   const [showUpload, setShowUpload] = useState(false);
@@ -223,7 +200,7 @@ export default function Landing({ onSelectDemo, onUploadGraph }) {
                 {copiedKey === 'rubric' ? 'Copied!' : 'Copy prompt'}
               </button>
 
-              <p style={{ ...styles.promptLabel, marginTop: 20 }}>3. Draft a teaching agent (the rules of the game)</p>
+              <p style={{ ...styles.promptLabel, marginTop: 20 }}>3. Create a complete tutor prompt (the teacher)</p>
               <pre style={styles.promptBox}>{AGENT_PROMPT_TEMPLATE}</pre>
               <button style={styles.copyBtn} onClick={() => copyPrompt('agent', AGENT_PROMPT_TEMPLATE)}>
                 {copiedKey === 'agent' ? 'Copied!' : 'Copy prompt'}
