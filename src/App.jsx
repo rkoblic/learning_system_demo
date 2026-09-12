@@ -283,8 +283,23 @@ export default function App() {
         return JSON.stringify({ success: true, node_id: input.node_id, legacy_status: input.status });
       }
       case 'set_focus_node': {
+        const node = graph?.nodes.find((n) => n.id === input.node_id);
+        if (!node) return JSON.stringify({ error: `Node '${input.node_id}' not found` });
+
+        const existingEvidence = evidenceMap[input.node_id];
+        if (normalizeRubric(node) && !existingEvidence) {
+          dispatch({
+            type: 'UPDATE_EVIDENCE',
+            node_id: input.node_id,
+            status: 'collecting',
+          });
+        }
         dispatch({ type: 'SET_CURRENT_NODE', node_id: input.node_id });
-        return JSON.stringify({ success: true, focused_on: input.node_id });
+        return JSON.stringify({
+          success: true,
+          focused_on: input.node_id,
+          evidence_status: existingEvidence?.status || (normalizeRubric(node) ? 'collecting' : 'not_assessed'),
+        });
       }
       case 'conclude_assessment': {
         return JSON.stringify({ success: true, summary: input.summary });
