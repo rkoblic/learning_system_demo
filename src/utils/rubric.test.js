@@ -76,10 +76,10 @@ test('unknown and duplicate criterion IDs are rejected', () => {
   assert.match(duplicate.error, /submitted more than once/);
 });
 
-test('legacy win conditions remain loadable as one binary criterion', () => {
+test('legacy win conditions are exposed as binary criteria', () => {
   const rubric = normalizeRubric({ id: 'legacy', win_condition: 'The learner explains the mechanism.' });
-  assert.equal(rubric.legacy, true);
-  assert.equal(rubric.criteria[0].id, 'legacy-win-condition');
+  assert.equal(rubric.criteria.length, 2);
+  assert.equal(rubric.criteria[0].id, 'observable-performance');
 });
 
 test('graph validation accepts valid rubrics and rejects malformed criteria', () => {

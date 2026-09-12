@@ -15,13 +15,19 @@ export function normalizeRubric(node) {
   if (typeof node?.win_condition === 'string' && node.win_condition.trim()) {
     return {
       combination_rule: 'all_essential',
-      legacy: true,
       criteria: [
         {
-          id: 'legacy-win-condition',
-          label: 'Legacy win condition',
+          id: 'observable-performance',
+          label: 'Observable performance',
           meets_when: node.win_condition.trim(),
           does_not_meet_when: 'The performance does not provide observable evidence that satisfies this condition.',
+          essential: true,
+        },
+        {
+          id: 'case-specific-evidence',
+          label: 'Case-specific evidence',
+          meets_when: 'The learner supports the performance with concrete details from the supplied situation.',
+          does_not_meet_when: 'The response is asserted or generic and could apply unchanged to a materially different situation.',
           essential: true,
         },
       ],
