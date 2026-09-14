@@ -62,6 +62,7 @@ export async function runAgentLoop({ system, messages, tools, onToolCall, onTool
           name: block.name,
           input: block.input,
           result,
+          timestamp: new Date().toISOString(),
         };
         allToolCalls.push(toolCall);
         if (onToolLog) onToolLog(toolCall);

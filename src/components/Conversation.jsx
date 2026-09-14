@@ -112,7 +112,7 @@ export default function Conversation({
             style={styles.reasoningToggle}
             onClick={() => setShowReasoning(!showReasoning)}
           >
-            Agent tool use ({toolCallLog.length} call{toolCallLog.length !== 1 ? 's' : ''}) {showReasoning ? '▼' : '▶'}
+            Session tool use ({toolCallLog.length} call{toolCallLog.length !== 1 ? 's' : ''}) {showReasoning ? '▼' : '▶'}
           </button>
           {showReasoning && (
             <div style={styles.reasoningContent}>
@@ -130,6 +130,7 @@ export default function Conversation({
                     <span style={styles.toolInput}>
                       {formatToolInput(tc.name, tc.input)}
                     </span>
+                    {tc.turn && <span style={styles.toolTurn}>Turn {tc.turn}</span>}
                   </div>
                   {tc.name === 'update_node_status' && (
                     <div style={styles.toolDetail}>
@@ -327,6 +328,12 @@ const styles = {
     fontSize: 13,
     color: '#64748b',
     fontFamily: 'monospace',
+  },
+  toolTurn: {
+    marginLeft: 'auto',
+    fontSize: 11,
+    color: '#94a3b8',
+    whiteSpace: 'nowrap',
   },
   toolDetail: {
     fontSize: 12,

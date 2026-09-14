@@ -13,6 +13,8 @@ import { normalizeRubric, validateCriterionSubmission } from './utils/rubric';
 import { validateGraph } from './utils/validateGraph';
 import { SIMULATED_LEARNER_PROMPT, buildCustomLearnerPrompt } from './prompts/simulated-learner';
 import { DEMO_SCRIPT } from './data/demo-script';
+import { createRunFilename, createRunMarkdown } from './utils/runExport';
+import { clearConfiguration, loadConfiguration, saveConfiguration } from './utils/persistence';
 import tutorStarter from './prompts/tutor.md?raw';
 
 const DEFAULT_CUSTOM_LEARNER = {
@@ -42,6 +44,7 @@ const MAX_TURNS = 10; // Max exchanges per session (applies to API modes, not de
 const initialState = {
   screen: 'landing', // 'landing' | 'main'
   graph: null,
+  isDemoGraph: false,
   agent: 'diagnostician', // 'diagnostician' | 'socratic' | 'direct' | 'custom'
   mode: 'learner', // 'learner' | 'simulated' | 'custom' | 'demo'
   customLearner: { ...DEFAULT_CUSTOM_LEARNER },
@@ -55,6 +58,7 @@ const initialState = {
   isLoading: false,
   loadingActor: null, // 'agent' | 'learner' | null — who is currently generating
   started: false,
+  startedAt: null,
   demoTurnIndex: 0,
 };
 
@@ -66,6 +70,7 @@ function reducer(state, action) {
         screen: 'main',
         graph: action.graph,
         isDemoGraph: action.isDemo || false,
+        mode: state.mode === 'demo' && !action.isDemo ? 'learner' : state.mode,
         conversation: [],
         displayMessages: [],
         evidenceMap: {},
@@ -73,6 +78,7 @@ function reducer(state, action) {
         startNode: null,
         toolCallLog: [],
         started: false,
+        startedAt: null,
       };
     case 'SET_AGENT':
       return { ...state, agent: action.agent };
@@ -103,7 +109,7 @@ function reducer(state, action) {
     case 'SET_AGENT_FULL_PROMPT':
       return { ...state, customAgent: { ...state.customAgent, fullPrompt: action.value } };
     case 'START_SESSION':
-      return { ...state, started: true };
+      return { ...state, started: true, startedAt: action.startedAt };
     case 'ADD_CONVERSATION_MESSAGES':
       return { ...state, conversation: [...state.conversation, ...action.messages] };
     case 'ADD_DISPLAY_MESSAGE':
@@ -125,10 +131,18 @@ function reducer(state, action) {
     case 'SET_START_NODE':
       // Seed both the start node and the visible focus highlight before the session begins.
       return { ...state, startNode: action.node_id, currentNode: action.node_id };
-    case 'SET_TOOL_LOG':
-      return { ...state, toolCallLog: action.log };
     case 'ADD_TOOL_CALL':
-      return { ...state, toolCallLog: [...state.toolCallLog, action.call] };
+      return {
+        ...state,
+        toolCallLog: [
+          ...state.toolCallLog,
+          {
+            ...action.call,
+            order: state.toolCallLog.length + 1,
+            timestamp: action.call.timestamp || new Date().toISOString(),
+          },
+        ],
+      };
     case 'SET_LOADING':
       return {
         ...state,
@@ -147,17 +161,49 @@ function reducer(state, action) {
         startNode: null,
         toolCallLog: [],
         started: false,
+        startedAt: null,
         demoTurnIndex: 0,
       };
     case 'BACK_TO_LANDING':
-      return { ...initialState };
+      return {
+        ...initialState,
+        agent: state.agent,
+        mode: state.mode,
+        customAgent: state.customAgent,
+        customLearner: state.customLearner,
+      };
+    case 'RESET_CONFIGURATION':
+      return {
+        ...initialState,
+        customAgent: { ...DEFAULT_CUSTOM_AGENT },
+        customLearner: { ...DEFAULT_CUSTOM_LEARNER },
+      };
     default:
       return state;
   }
 }
 
+function createInitialState() {
+  const stored = loadConfiguration();
+  if (!stored) return initialState;
+
+  const graphIsValid = stored.graph && validateGraph(stored.graph).length === 0;
+  return {
+    ...initialState,
+    screen: graphIsValid ? 'main' : 'landing',
+    graph: graphIsValid ? stored.graph : null,
+    isDemoGraph: graphIsValid && !!stored.isDemoGraph,
+    agent: stored.agent || initialState.agent,
+    mode: stored.mode === 'demo' && !stored.isDemoGraph
+      ? initialState.mode
+      : stored.mode || initialState.mode,
+    customAgent: { ...DEFAULT_CUSTOM_AGENT, ...(stored.customAgent || {}) },
+    customLearner: { ...DEFAULT_CUSTOM_LEARNER, ...(stored.customLearner || {}) },
+  };
+}
+
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState, createInitialState);
   const [showUnderTheHood, setShowUnderTheHood] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const startedRef = useRef(false);
@@ -168,6 +214,17 @@ export default function App() {
 
   useEffect(() => { graphRef.current = state.graph; }, [state.graph]);
   useEffect(() => { evidenceMapRef.current = state.evidenceMap; }, [state.evidenceMap]);
+  useEffect(() => {
+    if (state.screen !== 'main' || !state.graph) return;
+    saveConfiguration({
+      graph: state.graph,
+      isDemoGraph: state.isDemoGraph,
+      agent: state.agent,
+      mode: state.mode,
+      customAgent: state.customAgent,
+      customLearner: state.customLearner,
+    });
+  }, [state.screen, state.graph, state.isDemoGraph, state.agent, state.mode, state.customAgent, state.customLearner]);
 
   // Execute a tool call against local state
   const executeTool = useCallback((toolName, input) => {
@@ -316,8 +373,8 @@ export default function App() {
       state.customAgent,
       state.startNode
     );
+    const agentTurn = state.displayMessages.filter((message) => message.role === 'assistant').length + 1;
     dispatch({ type: 'SET_LOADING', isLoading: true, actor: 'agent' });
-    dispatch({ type: 'SET_TOOL_LOG', log: [] });
 
     try {
       // Build API messages: only role + content (strip hidden flag, etc.)
@@ -326,12 +383,15 @@ export default function App() {
         content: m.content,
       }));
 
-      const { message, toolCalls } = await runAgentLoop({
+      const { message } = await runAgentLoop({
         system: systemPrompt,
         messages: apiMessages,
         tools: TOOL_DEFINITIONS,
         onToolCall: executeTool,
-        onToolLog: (call) => dispatch({ type: 'ADD_TOOL_CALL', call }),
+        onToolLog: (call) => dispatch({
+          type: 'ADD_TOOL_CALL',
+          call: { ...call, turn: agentTurn },
+        }),
       });
 
       // Add assistant response to both conversation (for API context) and display
@@ -352,7 +412,7 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_LOADING', isLoading: false });
     }
-  }, [state.agent, state.graph, state.customAgent, state.startNode, executeTool]);
+  }, [state.agent, state.graph, state.customAgent, state.startNode, state.displayMessages, executeTool]);
 
   // Auto-send first agent message when session starts
   useEffect(() => {
@@ -381,9 +441,17 @@ export default function App() {
 
     // Play tool calls from demo script
     if (turn.agent.toolCalls) {
-      dispatch({ type: 'SET_TOOL_LOG', log: turn.agent.toolCalls });
       turn.agent.toolCalls.forEach((tc) => {
-        executeTool(tc.name, tc.input);
+        const result = executeTool(tc.name, tc.input);
+        dispatch({
+          type: 'ADD_TOOL_CALL',
+          call: {
+            ...tc,
+            result,
+            turn: turnIndex + 1,
+            timestamp: new Date().toISOString(),
+          },
+        });
       });
     }
 
@@ -487,6 +555,47 @@ export default function App() {
     }
   }, [state.conversation, state.displayMessages, state.isLoading, state.mode, state.customLearner, state.demoTurnIndex, turnLimitReached, callAgent, playDemoTurn]);
 
+  const handleDownloadRun = useCallback(() => {
+    const createdAt = new Date();
+    const learnerPrompt = state.mode === 'custom'
+      ? buildCustomLearnerPrompt(state.customLearner)
+      : state.mode === 'simulated'
+        ? SIMULATED_LEARNER_PROMPT
+        : null;
+    const markdown = createRunMarkdown({
+      createdAt,
+      startedAt: state.startedAt,
+      currentNode: state.currentNode,
+      graph: state.graph,
+      messages: state.displayMessages,
+      evidenceMap: state.evidenceMap,
+      toolCallLog: state.toolCallLog,
+      tutorPrompt: state.mode === 'demo'
+        ? null
+        : buildAgentSystemPrompt(state.agent, state.graph, state.customAgent, state.startNode),
+      learnerMode: state.mode,
+      learnerPrompt,
+      learnerConfig: state.mode === 'custom' ? state.customLearner : null,
+    });
+    const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = createRunFilename(createdAt);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, [state]);
+
+  const handleResetSavedSetup = useCallback(() => {
+    if (!window.confirm('Reset the saved graph and tutor/learner configuration?')) return;
+    clearConfiguration();
+    startedRef.current = false;
+    setShowBuilder(false);
+    setShowUnderTheHood(false);
+    dispatch({ type: 'RESET_CONFIGURATION' });
+  }, []);
+
   if (state.screen === 'landing') {
     return (
       <Landing
@@ -569,10 +678,28 @@ export default function App() {
           <button style={styles.newBtn} onClick={() => setShowUnderTheHood(true)}>
             Under the Hood
           </button>
-          {!state.started ? (
-            <button style={styles.startBtn} onClick={() => dispatch({ type: 'START_SESSION' })}>
-              Start
+          {state.started && (
+            <button
+              style={styles.downloadBtn}
+              onClick={handleDownloadRun}
+              disabled={state.isLoading}
+              title={state.isLoading ? 'Wait for the current turn to finish before downloading' : 'Download this run as Markdown'}
+            >
+              Download Run
             </button>
+          )}
+          {!state.started ? (
+            <>
+              <button style={styles.resetBtn} onClick={handleResetSavedSetup}>
+                Reset saved setup
+              </button>
+              <button
+                style={styles.startBtn}
+                onClick={() => dispatch({ type: 'START_SESSION', startedAt: new Date().toISOString() })}
+              >
+                Start
+              </button>
+            </>
           ) : (
             <button style={styles.newBtn} onClick={() => { startedRef.current = false; dispatch({ type: 'NEW_SESSION' }); }}>
               New session
@@ -655,10 +782,13 @@ export default function App() {
           learnerPrompt={
             state.mode === 'custom'
               ? buildCustomLearnerPrompt(state.customLearner)
-              : SIMULATED_LEARNER_PROMPT
+              : state.mode === 'simulated'
+                ? SIMULATED_LEARNER_PROMPT
+                : ''
           }
           learnerMode={state.mode}
           toolDefinitions={TOOL_DEFINITIONS}
+          toolCallLog={state.toolCallLog}
           graph={state.graph}
           onClose={() => setShowUnderTheHood(false)}
         />
@@ -730,6 +860,25 @@ const styles = {
     color: '#475569',
     border: '1px solid #e2e8f0',
     borderRadius: 6,
+    cursor: 'pointer',
+  },
+  downloadBtn: {
+    padding: '8px 16px',
+    fontSize: 14,
+    fontWeight: 600,
+    background: '#ecfdf5',
+    color: '#047857',
+    border: '1px solid #a7f3d0',
+    borderRadius: 6,
+    cursor: 'pointer',
+  },
+  resetBtn: {
+    padding: '8px 12px',
+    fontSize: 12,
+    fontWeight: 600,
+    background: 'transparent',
+    color: '#64748b',
+    border: 'none',
     cursor: 'pointer',
   },
   panels: {

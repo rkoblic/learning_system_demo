@@ -4,10 +4,11 @@ const TABS = [
   { key: 'prompt', label: 'Agent Prompt' },
   { key: 'learner', label: 'Simulated Learner' },
   { key: 'tools', label: 'Tools' },
+  { key: 'history', label: 'Tool History' },
   { key: 'graph', label: 'Graph JSON' },
 ];
 
-export default function UnderTheHood({ systemPrompt, learnerPrompt, learnerMode, toolDefinitions, graph, onClose }) {
+export default function UnderTheHood({ systemPrompt, learnerPrompt, learnerMode, toolDefinitions, toolCallLog, graph, onClose }) {
   const [activeTab, setActiveTab] = useState('prompt');
   const [copied, setCopied] = useState(false);
   const [expandedTools, setExpandedTools] = useState(new Set());
@@ -20,6 +21,10 @@ export default function UnderTheHood({ systemPrompt, learnerPrompt, learnerMode,
         return learnerPrompt;
       case 'tools':
         return JSON.stringify(toolDefinitions, null, 2);
+      case 'history':
+        return toolCallLog?.length
+          ? JSON.stringify(toolCallLog, null, 2)
+          : 'No tool calls have been recorded in this session.';
       case 'graph':
         return JSON.stringify(graph, null, 2);
       default:
@@ -92,7 +97,11 @@ export default function UnderTheHood({ systemPrompt, learnerPrompt, learnerMode,
                 <div style={styles.contextNote}>
                   {learnerMode === 'custom'
                     ? 'Built from the toggles you selected in the Custom simulated learner panel.'
-                    : "Default profile — 'The Communication Fixer'. Switch the Mode dropdown to Custom simulated learner to design your own."}
+                    : learnerMode === 'simulated'
+                      ? 'Default simulated learner profile.'
+                      : learnerMode === 'demo'
+                        ? 'The demo learner is pre-scripted, so no learner system prompt is sent.'
+                        : 'You are playing the learner, so no synthetic learner prompt is used.'}
                 </div>
               )}
               <pre style={styles.codeBlock}>{getContent()}</pre>
@@ -169,7 +178,7 @@ const styles = {
   },
   activeTab: {
     color: '#3b82f6',
-    borderBottomColor: '#3b82f6',
+    borderBottom: '2px solid #3b82f6',
   },
   content: {
     flex: 1,
